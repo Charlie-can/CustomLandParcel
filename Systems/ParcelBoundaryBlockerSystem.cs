@@ -11,7 +11,7 @@ using Unity.Mathematics;
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// Creates native MapTile-shaped blockers around the current parcel so vanilla validation raises ExceedsCityLimits.
+    /// Creates native MapTile-shaped blockers around active parcel union bounds so vanilla validation raises ExceedsCityLimits.
     /// </summary>
     public partial class ParcelBoundaryBlockerSystem : GameSystemBase
     {
@@ -25,7 +25,7 @@ namespace CustomLandParcel.Systems
         private EntityQuery m_MapTileQuery;
         private EntityQuery m_BlockerQuery;
         private EntityQuery m_BlockerReadyQuery;
-        private ParcelBoundsSystem m_ParcelBoundsSystem;
+        private ParcelStoreSystem m_ParcelStoreSystem;
         private bool m_Created;
         private uint m_AppliedParcelVersion;
         private uint m_PendingParcelVersion;
@@ -35,7 +35,7 @@ namespace CustomLandParcel.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_ParcelBoundsSystem = World.GetOrCreateSystemManaged<ParcelBoundsSystem>();
+            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
             m_MapTilePrefabQuery = GetEntityQuery(
                 ComponentType.ReadOnly<MapTileData>(),
                 ComponentType.ReadOnly<AreaData>(),
@@ -52,7 +52,7 @@ namespace CustomLandParcel.Systems
                 ComponentType.ReadOnly<Area>(),
                 ComponentType.ReadOnly<Node>(),
                 ComponentType.ReadOnly<Triangle>(),
-                ComponentType.ReadOnly<Geometry>(),
+                ComponentType.ReadOnly<Game.Areas.Geometry>(),
                 ComponentType.ReadOnly<PrefabRef>(),
                 ComponentType.ReadOnly<Native>());
             Mod.log.Info("ParcelBoundaryBlockerSystem enabled. Waiting for map tile prefab and map tile entities.");
@@ -60,7 +60,7 @@ namespace CustomLandParcel.Systems
 
         protected override void OnUpdate()
         {
-            var currentVersion = m_ParcelBoundsSystem.Version;
+            var currentVersion = m_ParcelStoreSystem.Version;
             if (m_Created && m_AppliedParcelVersion == currentVersion)
             {
                 VerifyBlockersAfterCreation();
@@ -77,7 +77,7 @@ namespace CustomLandParcel.Systems
                 if (m_VerificationFramesRemaining == 0)
                 {
                     Mod.log.Info(
-                        $"Parcel blocker waiting: prefabQueryEmpty={m_MapTilePrefabQuery.IsEmptyIgnoreFilter}, mapTileQueryEmpty={m_MapTileQuery.IsEmptyIgnoreFilter}, parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={currentVersion}.");
+                        $"Parcel blocker waiting: prefabQueryEmpty={m_MapTilePrefabQuery.IsEmptyIgnoreFilter}, mapTileQueryEmpty={m_MapTileQuery.IsEmptyIgnoreFilter}, {m_ParcelStoreSystem.GetSummary()}.");
                     m_VerificationFramesRemaining = 120;
                 }
 
@@ -90,20 +90,25 @@ namespace CustomLandParcel.Systems
                 return;
             }
 
+            if (!m_ParcelStoreSystem.TryGetActiveUnionBounds(out var parcelMin, out var parcelMax))
+            {
+                Mod.log.Warn($"Parcel blocker skipped: no parcel union bounds. {m_ParcelStoreSystem.GetSummary()}.");
+                return;
+            }
+
             var prefabs = m_MapTilePrefabQuery.ToEntityArray(Allocator.Temp);
             try
             {
                 var prefab = prefabs[0];
-                var parcel = m_ParcelBoundsSystem.Bounds;
                 LogPrefabDiagnostics(prefab, prefabs.Length);
-                UpsertBlockers(prefab, worldMin, worldMax, parcel);
+                UpsertBlockers(prefab, worldMin, worldMax, parcelMin, parcelMax);
                 m_Created = true;
                 m_AppliedParcelVersion = currentVersion;
                 m_PendingParcelVersion = 0;
                 m_RebuildDelayFramesRemaining = 0;
                 m_VerificationFramesRemaining = 120;
                 Mod.log.Info(
-                    $"Applied vanilla MapTile-style blockers around parcel. World bounds x/z {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}; parcel {parcel}; parcelVersion={m_AppliedParcelVersion}.");
+                    $"Applied vanilla MapTile-style blockers around active parcel union. World bounds x/z {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}; activeParcelBounds={ParcelBounds.Format(parcelMin)}..{ParcelBounds.Format(parcelMax)}; {m_ParcelStoreSystem.GetSummary()}.");
             }
             finally
             {
@@ -118,7 +123,7 @@ namespace CustomLandParcel.Systems
                 m_PendingParcelVersion = currentVersion;
                 m_RebuildDelayFramesRemaining = RebuildDelayFrames;
                 Mod.log.Info(
-                    $"Parcel blocker rebuild queued after parcel change. appliedVersion={m_AppliedParcelVersion}, pendingVersion={m_PendingParcelVersion}, delayFrames={RebuildDelayFrames}, parcel={m_ParcelBoundsSystem.Bounds}.");
+                    $"Parcel blocker rebuild queued after parcel change. appliedVersion={m_AppliedParcelVersion}, pendingVersion={m_PendingParcelVersion}, delayFrames={RebuildDelayFrames}, {m_ParcelStoreSystem.GetSummary()}.");
                 return false;
             }
 
@@ -167,15 +172,15 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private void UpsertBlockers(Entity prefab, float2 worldMin, float2 worldMax, ParcelBounds parcel)
+        private void UpsertBlockers(Entity prefab, float2 worldMin, float2 worldMax, float2 parcelMin, float2 parcelMax)
         {
             using var existing = m_BlockerQuery.ToEntityArray(Allocator.Temp);
             var blockerCount = 0;
 
-            UpsertBlocker(prefab, existing, blockerCount++, new float2(worldMin.x, worldMin.y), new float2(parcel.Min.x, worldMax.y));
-            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcel.Max.x, worldMin.y), new float2(worldMax.x, worldMax.y));
-            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcel.Min.x, worldMin.y), new float2(parcel.Max.x, parcel.Min.y));
-            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcel.Min.x, parcel.Max.y), new float2(parcel.Max.x, worldMax.y));
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(worldMin.x, worldMin.y), new float2(parcelMin.x, worldMax.y));
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcelMax.x, worldMin.y), new float2(worldMax.x, worldMax.y));
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcelMin.x, worldMin.y), new float2(parcelMax.x, parcelMin.y));
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcelMin.x, parcelMax.y), new float2(parcelMax.x, worldMax.y));
 
             for (var i = blockerCount; i < existing.Length; i++)
             {
@@ -279,7 +284,7 @@ namespace CustomLandParcel.Systems
                 m_VerificationFramesRemaining == 1)
             {
                 Mod.log.Info(
-                    $"Parcel blocker verification: totalMarked={m_BlockerQuery.CalculateEntityCount()}, readyForAreaSearch={m_BlockerReadyQuery.CalculateEntityCount()}, updatedStillPresent={CountBlockersWithUpdated()}, parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_AppliedParcelVersion}.");
+                    $"Parcel blocker verification: totalMarked={m_BlockerQuery.CalculateEntityCount()}, readyForAreaSearch={m_BlockerReadyQuery.CalculateEntityCount()}, updatedStillPresent={CountBlockersWithUpdated()}, appliedVersion={m_AppliedParcelVersion}, {m_ParcelStoreSystem.GetSummary()}.");
             }
 
             m_VerificationFramesRemaining--;
@@ -307,10 +312,10 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private static Geometry CreateGeometry(float2 min, float2 max)
+        private static Game.Areas.Geometry CreateGeometry(float2 min, float2 max)
         {
             var bounds = new Bounds3(new float3(min.x, 0f, min.y), new float3(max.x, 0f, max.y));
-            return new Geometry
+            return new Game.Areas.Geometry
             {
                 m_Bounds = bounds,
                 m_CenterPosition = new float3((min.x + max.x) * 0.5f, 0f, (min.y + max.y) * 0.5f),

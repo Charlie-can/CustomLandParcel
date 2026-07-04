@@ -8,8 +8,23 @@
 	</PropertyGroup>
 	
 	<!--Imports must be after PropertyGroup block-->
-	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" />
-	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
+	<Import Project="$(CSII_TOOLPATH)\Mod.props" Condition="'$(CSII_TOOLPATH)' != '' And Exists('$(CSII_TOOLPATH)\Mod.props')" />
+	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" Condition="!Exists('$(CSII_TOOLPATH)\Mod.props')" />
+
+	<PropertyGroup>
+		<ManagedPath Condition="'$(ManagedPath)' == '' And '$(CSII_MANAGEDPATH)' != ''">$(CSII_MANAGEDPATH)</ManagedPath>
+		<UserDataPath Condition="'$(UserDataPath)' == '' And '$(CSII_USERDATAPATH)' != ''">$(CSII_USERDATAPATH)</UserDataPath>
+		<LocalModsPath Condition="'$(LocalModsPath)' == '' And '$(CSII_LOCALMODSPATH)' != ''">$(CSII_LOCALMODSPATH)</LocalModsPath>
+		<UnityModProjectPath Condition="'$(UnityModProjectPath)' == '' And '$(CSII_UNITYMODPROJECTPATH)' != ''">$(CSII_UNITYMODPROJECTPATH)</UnityModProjectPath>
+		<ModPostProcessorPath Condition="'$(ModPostProcessorPath)' == '' And '$(CSII_MODPOSTPROCESSORPATH)' != ''">$(CSII_MODPOSTPROCESSORPATH)</ModPostProcessorPath>
+		<ModPublisherPath Condition="'$(ModPublisherPath)' == '' And '$(CSII_MODPUBLISHERPATH)' != ''">$(CSII_MODPUBLISHERPATH)</ModPublisherPath>
+		<EntitiesVersion Condition="'$(EntitiesVersion)' == '' And '$(CSII_ENTITIESVERSION)' != ''">$(CSII_ENTITIESVERSION)</EntitiesVersion>
+		<EntityPackagePath Condition="'$(EntityPackagePath)' == '' And '$(UnityModProjectPath)' != '' And '$(EntitiesVersion)' != ''">$(UnityModProjectPath)\Library\PackageCache\com.unity.entities@$(EntitiesVersion)\Unity.Entities\SourceGenerators</EntityPackagePath>
+		<MSCORLIBPath Condition="'$(MSCORLIBPath)' == '' And '$(CSII_MSCORLIBPATH)' != ''">$(CSII_MSCORLIBPATH)</MSCORLIBPath>
+	</PropertyGroup>
+
+	<Import Project="$(CSII_TOOLPATH)\Mod.targets" Condition="'$(CSII_TOOLPATH)' != '' And Exists('$(CSII_TOOLPATH)\Mod.targets')" />
+	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" Condition="!Exists('$(CSII_TOOLPATH)\Mod.targets')" />
 
 	<ItemGroup>
 		<Reference Include="Game">
@@ -28,6 +43,12 @@
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="Colossal.IO.AssetDatabase">
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Colossal.UI">
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Colossal.UI.Binding">
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="UnityEngine.CoreModule">

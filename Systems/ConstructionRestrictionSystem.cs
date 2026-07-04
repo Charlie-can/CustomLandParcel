@@ -10,8 +10,7 @@ using Unity.Mathematics;
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// MVP validation system: treats a fixed rectangle near the map center as the only purchased parcel.
-    /// Temporary construction previews outside that rectangle are marked with the vanilla Error marker.
+    /// Marks temporary construction previews outside purchased custom parcels with the vanilla Error marker.
     /// </summary>
     public partial class ConstructionRestrictionSystem : GameSystemBase
     {
@@ -21,15 +20,14 @@ namespace CustomLandParcel.Systems
 
         private EntityQuery m_ObjectPreviewQuery;
         private EntityQuery m_CurvePreviewQuery;
+        private ParcelStoreSystem m_ParcelStoreSystem;
         private int m_LastInvalidCount = -1;
         private int m_FramesSinceLog;
-
-        internal static readonly float2 ParcelMin = ParcelBounds.Default.Min;
-        internal static readonly float2 ParcelMax = ParcelBounds.Default.Max;
 
         protected override void OnCreate()
         {
             base.OnCreate();
+            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
 
             m_ObjectPreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
@@ -41,7 +39,7 @@ namespace CustomLandParcel.Systems
                 ComponentType.ReadOnly<Curve>(),
                 ComponentType.Exclude<Deleted>());
 
-            Mod.log.Info("ConstructionRestrictionSystem enabled. MVP buildable rectangle: x/z -500..500");
+            Mod.log.Info($"ConstructionRestrictionSystem enabled. {m_ParcelStoreSystem.GetSummary()}.");
         }
 
         protected override void OnUpdate()
@@ -56,7 +54,7 @@ namespace CustomLandParcel.Systems
                 m_LastInvalidCount = invalidCount;
                 m_FramesSinceLog = 0;
                 Mod.log.Info(
-                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside MVP parcel.");
+                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside purchased parcels. {m_ParcelStoreSystem.GetSummary()}.");
             }
         }
 
@@ -80,7 +78,7 @@ namespace CustomLandParcel.Systems
                     }
 
                     var position = transforms[i].m_Position;
-                    var valid = Contains(new float2(position.x, position.z));
+                    var valid = m_ParcelStoreSystem.IsBuildable(new float2(position.x, position.z));
                     SetRestrictionError(entity, !valid);
 
                     if (!valid)
@@ -191,13 +189,13 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private static bool CurveInsideParcel(Colossal.Mathematics.Bezier4x3 curve)
+        private bool CurveInsideParcel(Colossal.Mathematics.Bezier4x3 curve)
         {
             for (var i = 0; i <= 8; i++)
             {
                 var t = i / 8f;
                 var position = EvaluateBezier(curve, t);
-                if (!Contains(new float2(position.x, position.z)))
+                if (!m_ParcelStoreSystem.IsBuildable(new float2(position.x, position.z)))
                 {
                     return false;
                 }
@@ -213,11 +211,6 @@ namespace CustomLandParcel.Systems
                    + 3f * u * u * t * curve.b
                    + 3f * u * t * t * curve.c
                    + t * t * t * curve.d;
-        }
-
-        internal static bool Contains(float2 point)
-        {
-            return point.x >= ParcelMin.x && point.x <= ParcelMax.x && point.y >= ParcelMin.y && point.y <= ParcelMax.y;
         }
     }
 }

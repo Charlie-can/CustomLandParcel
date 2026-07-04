@@ -24,7 +24,7 @@ namespace CustomLandParcel.Systems
             CustomLandParcelSettings.ShrinkAction
         };
 
-        private ParcelBoundsSystem m_ParcelBoundsSystem;
+        private ParcelStoreSystem m_ParcelStoreSystem;
         private bool m_ActionsEnabled;
         private bool m_EditMode;
         private int m_EditActionCooldownFrames;
@@ -33,7 +33,7 @@ namespace CustomLandParcel.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_ParcelBoundsSystem = World.GetOrCreateSystemManaged<ParcelBoundsSystem>();
+            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
             Mod.log.Info(
                 "ParcelBoundaryControlSystem enabled. Toggle edit mode with the configured mod keybinding, then move/resize the parcel with configured bindings.");
         }
@@ -51,7 +51,7 @@ namespace CustomLandParcel.Systems
             {
                 m_EditMode = !m_EditMode;
                 Mod.log.Info(
-                    $"Parcel edit mode {(m_EditMode ? "enabled" : "disabled")}. parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}.");
+                    $"Parcel edit mode {(m_EditMode ? "enabled" : "disabled")}. {m_ParcelStoreSystem.GetSummary()}.");
             }
 
             if (!m_EditMode)
@@ -68,37 +68,37 @@ namespace CustomLandParcel.Systems
             var changed = false;
             if (WasPressed(CustomLandParcelSettings.MoveNorthAction))
             {
-                m_ParcelBoundsSystem.Move(new float2(0f, MoveStep), "move north hotkey");
+                m_ParcelStoreSystem.MoveSelectedParcel(new float2(0f, MoveStep), "move north hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.MoveSouthAction))
             {
-                m_ParcelBoundsSystem.Move(new float2(0f, -MoveStep), "move south hotkey");
+                m_ParcelStoreSystem.MoveSelectedParcel(new float2(0f, -MoveStep), "move south hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.MoveWestAction))
             {
-                m_ParcelBoundsSystem.Move(new float2(-MoveStep, 0f), "move west hotkey");
+                m_ParcelStoreSystem.MoveSelectedParcel(new float2(-MoveStep, 0f), "move west hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.MoveEastAction))
             {
-                m_ParcelBoundsSystem.Move(new float2(MoveStep, 0f), "move east hotkey");
+                m_ParcelStoreSystem.MoveSelectedParcel(new float2(MoveStep, 0f), "move east hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.GrowAction))
             {
-                m_ParcelBoundsSystem.Resize(ResizeStep, "grow hotkey");
+                m_ParcelStoreSystem.ResizeSelectedParcel(ResizeStep, "grow hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.ShrinkAction))
             {
-                m_ParcelBoundsSystem.Resize(-ResizeStep, "shrink hotkey");
+                m_ParcelStoreSystem.ResizeSelectedParcel(-ResizeStep, "shrink hotkey");
                 changed = true;
             }
 
@@ -114,7 +114,7 @@ namespace CustomLandParcel.Systems
             if (m_FramesUntilLog <= 0)
             {
                 Mod.log.Info(
-                    $"Parcel edit mode active. parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}, moveStep={MoveStep:F0}, resizeStep={ResizeStep:F0}, cooldownFrames={EditActionCooldownFrames}.");
+                    $"Parcel edit mode active. {m_ParcelStoreSystem.GetSummary()}, moveStep={MoveStep:F0}, resizeStep={ResizeStep:F0}, cooldownFrames={EditActionCooldownFrames}.");
                 m_FramesUntilLog = 300;
             }
 

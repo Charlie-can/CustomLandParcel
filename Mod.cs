@@ -23,13 +23,14 @@ namespace CustomLandParcel
             Settings.RegisterKeyBindings();
             log.Info("Registered CustomLandParcel settings, localization, and keybindings in the game options UI.");
 
-            updateSystem.UpdateAt<ParcelBoundsSystem>(SystemUpdatePhase.Serialize);
+            updateSystem.UpdateAt<ParcelStoreSystem>(SystemUpdatePhase.Serialize);
             updateSystem.UpdateAt<ParcelBoundaryControlSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelBoundaryBlockerSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelPlacementDiagnosticsSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
+            updateSystem.UpdateAt<ParcelUISystem>(SystemUpdatePhase.UIUpdate);
             log.Info(
-                "Registered ParcelBoundsSystem at Serialize, ParcelBoundaryControlSystem/ParcelBoundaryBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ParcelBoundaryRenderSystem at Rendering.");
+                "Registered ParcelStoreSystem at Serialize, ParcelBoundaryControlSystem/ParcelBoundaryBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {

@@ -18,7 +18,7 @@ namespace CustomLandParcel.Systems
         private const int MaxSamples = 3;
         private EntityQuery m_ObjectPreviewQuery;
         private EntityQuery m_CurvePreviewQuery;
-        private ParcelBoundsSystem m_ParcelBoundsSystem;
+        private ParcelStoreSystem m_ParcelStoreSystem;
         private int m_LastOutsideCount = -1;
         private int m_LastOutsideErrorCount = -1;
         private int m_FramesSinceLog;
@@ -26,7 +26,7 @@ namespace CustomLandParcel.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_ParcelBoundsSystem = World.GetOrCreateSystemManaged<ParcelBoundsSystem>();
+            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
 
             m_ObjectPreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
@@ -39,7 +39,7 @@ namespace CustomLandParcel.Systems
                 ComponentType.Exclude<Deleted>());
 
             Mod.log.Info(
-                $"ParcelPlacementDiagnosticsSystem enabled. Parcel x/z {m_ParcelBoundsSystem.Bounds}. Logging only active create/modify/replace/upgrade previews.");
+                $"ParcelPlacementDiagnosticsSystem enabled. {m_ParcelStoreSystem.GetSummary()}. Logging only active create/modify/replace/upgrade previews.");
         }
 
         protected override void OnUpdate()
@@ -65,12 +65,12 @@ namespace CustomLandParcel.Systems
             if (diagnostics.ActiveCount == 0)
             {
                 Mod.log.Info(
-                    $"Placement diagnostics: no active construction preview entities found this frame. parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}.");
+                    $"Placement diagnostics: no active construction preview entities found this frame. {m_ParcelStoreSystem.GetSummary()}.");
                 return;
             }
 
             Mod.log.Info(
-                $"Placement diagnostics: active={diagnostics.ActiveCount}, inside={diagnostics.InsideCount}, outside={diagnostics.OutsideCount}, outsideWithError={diagnostics.OutsideWithErrorCount}, outsideWithoutError={diagnostics.OutsideCount - diagnostics.OutsideWithErrorCount}, parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}, samples={diagnostics.Samples}.");
+                $"Placement diagnostics: active={diagnostics.ActiveCount}, inside={diagnostics.InsideCount}, outside={diagnostics.OutsideCount}, outsideWithError={diagnostics.OutsideWithErrorCount}, outsideWithoutError={diagnostics.OutsideCount - diagnostics.OutsideWithErrorCount}, {m_ParcelStoreSystem.GetSummary()}, samples={diagnostics.Samples}.");
 
             if (diagnostics.OutsideCount > 0 && diagnostics.OutsideWithErrorCount == 0)
             {
@@ -143,7 +143,7 @@ namespace CustomLandParcel.Systems
             Temp temp)
         {
             diagnostics.ActiveCount++;
-            var inside = m_ParcelBoundsSystem.Contains(point);
+            var inside = m_ParcelStoreSystem.IsBuildable(point);
             if (inside)
             {
                 diagnostics.InsideCount++;
@@ -230,7 +230,7 @@ namespace CustomLandParcel.Systems
             {
                 var t = i / 8f;
                 var position = EvaluateBezier(curve, t);
-                if (!m_ParcelBoundsSystem.Contains(new float2(position.x, position.z)))
+                if (!m_ParcelStoreSystem.IsBuildable(new float2(position.x, position.z)))
                 {
                     return false;
                 }
