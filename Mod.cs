@@ -29,10 +29,11 @@ namespace CustomLandParcel
             updateSystem.UpdateAt<ConstructionRestrictionSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<VanillaMapTileBlockerSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelPlacementDiagnosticsSystem>(SystemUpdatePhase.PostTool);
+            updateSystem.UpdateAt<ConstructionRestrictionPresentationSystem>(SystemUpdatePhase.PreCulling);
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
             updateSystem.UpdateAt<ParcelUISystem>(SystemUpdatePhase.UIUpdate);
             log.Info(
-                "Registered ParcelStoreSystem at Serialize, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/VanillaMapTileBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
+                "Registered ParcelStoreSystem at Serialize, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/VanillaMapTileBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {

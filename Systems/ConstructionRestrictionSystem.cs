@@ -16,10 +16,6 @@ namespace CustomLandParcel.Systems
     /// </summary>
     public partial class ConstructionRestrictionSystem : GameSystemBase
     {
-        private struct ParcelRestrictionError : IComponentData
-        {
-        }
-
         private EntityQuery _mObjectPreviewQuery;
         private EntityQuery _mCurvePreviewQuery;
         private EntityQuery _mToolErrorPrefabQuery;
