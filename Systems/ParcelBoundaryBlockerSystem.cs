@@ -85,8 +85,6 @@ namespace CustomLandParcel.Systems
                 return;
             }
 
-            ClearExistingBlockers();
-
             if (!TryGetWorldBounds(out var worldMin, out var worldMax))
             {
                 return;
@@ -98,14 +96,14 @@ namespace CustomLandParcel.Systems
                 var prefab = prefabs[0];
                 var parcel = m_ParcelBoundsSystem.Bounds;
                 LogPrefabDiagnostics(prefab, prefabs.Length);
-                CreateBlockers(prefab, worldMin, worldMax, parcel);
+                UpsertBlockers(prefab, worldMin, worldMax, parcel);
                 m_Created = true;
                 m_AppliedParcelVersion = currentVersion;
                 m_PendingParcelVersion = 0;
                 m_RebuildDelayFramesRemaining = 0;
                 m_VerificationFramesRemaining = 120;
                 Mod.log.Info(
-                    $"Created vanilla MapTile-style blockers around parcel. World bounds x/z {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}; parcel {parcel}; parcelVersion={m_AppliedParcelVersion}.");
+                    $"Applied vanilla MapTile-style blockers around parcel. World bounds x/z {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}; parcel {parcel}; parcelVersion={m_AppliedParcelVersion}.");
             }
             finally
             {
@@ -131,18 +129,6 @@ namespace CustomLandParcel.Systems
             }
 
             return true;
-        }
-
-        private void ClearExistingBlockers()
-        {
-            if (!m_BlockerQuery.IsEmptyIgnoreFilter)
-            {
-                Mod.log.Info(
-                    $"Clearing {m_BlockerQuery.CalculateEntityCount()} existing parcel blocker entity/entities before recreation. previousVersion={m_AppliedParcelVersion}, nextVersion={m_ParcelBoundsSystem.Version}.");
-                EntityManager.DestroyEntity(m_BlockerQuery);
-            }
-
-            m_Created = false;
         }
 
         private bool TryGetWorldBounds(out float2 worldMin, out float2 worldMax)
@@ -181,15 +167,25 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private void CreateBlockers(Entity prefab, float2 worldMin, float2 worldMax, ParcelBounds parcel)
+        private void UpsertBlockers(Entity prefab, float2 worldMin, float2 worldMax, ParcelBounds parcel)
         {
-            CreateBlocker(prefab, new float2(worldMin.x, worldMin.y), new float2(parcel.Min.x, worldMax.y));
-            CreateBlocker(prefab, new float2(parcel.Max.x, worldMin.y), new float2(worldMax.x, worldMax.y));
-            CreateBlocker(prefab, new float2(parcel.Min.x, worldMin.y), new float2(parcel.Max.x, parcel.Min.y));
-            CreateBlocker(prefab, new float2(parcel.Min.x, parcel.Max.y), new float2(parcel.Max.x, worldMax.y));
+            using var existing = m_BlockerQuery.ToEntityArray(Allocator.Temp);
+            var blockerCount = 0;
+
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(worldMin.x, worldMin.y), new float2(parcel.Min.x, worldMax.y));
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcel.Max.x, worldMin.y), new float2(worldMax.x, worldMax.y));
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcel.Min.x, worldMin.y), new float2(parcel.Max.x, parcel.Min.y));
+            UpsertBlocker(prefab, existing, blockerCount++, new float2(parcel.Min.x, parcel.Max.y), new float2(parcel.Max.x, worldMax.y));
+
+            for (var i = blockerCount; i < existing.Length; i++)
+            {
+                Mod.log.Warn(
+                    $"Destroying unexpected extra parcel blocker entity {FormatEntity(existing[i])}. expected=4, actual={existing.Length}.");
+                EntityManager.DestroyEntity(existing[i]);
+            }
         }
 
-        private void CreateBlocker(Entity prefab, float2 min, float2 max)
+        private void UpsertBlocker(Entity prefab, NativeArray<Entity> existing, int index, float2 min, float2 max)
         {
             if (math.any(max - min <= 1f))
             {
@@ -198,35 +194,64 @@ namespace CustomLandParcel.Systems
                 return;
             }
 
-            var entity = EntityManager.CreateEntity();
-            EntityManager.AddComponentData(entity, new PrefabRef(prefab));
-            EntityManager.AddComponentData(entity, new Area(AreaFlags.Complete));
-            EntityManager.AddBuffer<Node>(entity);
-            EntityManager.AddBuffer<Triangle>(entity);
-            EntityManager.AddComponentData(entity, CreateGeometry(min, max));
+            var created = index >= existing.Length;
+            var entity = created ? EntityManager.CreateEntity() : existing[index];
+
+            UpsertComponent(entity, new PrefabRef(prefab));
+            UpsertComponent(entity, new Area(AreaFlags.Complete));
+            UpsertComponent(entity, CreateGeometry(min, max));
 
             if (!EntityManager.HasComponent<Native>(entity))
             {
                 EntityManager.AddComponentData(entity, default(Native));
             }
 
-            EntityManager.AddComponentData(entity, default(ParcelBoundaryBlocker));
-            EntityManager.AddComponentData(entity, default(Updated));
+            if (!EntityManager.HasComponent<ParcelBoundaryBlocker>(entity))
+            {
+                EntityManager.AddComponentData(entity, default(ParcelBoundaryBlocker));
+            }
 
-            var nodes = EntityManager.GetBuffer<Node>(entity);
+            if (!EntityManager.HasComponent<Updated>(entity))
+            {
+                EntityManager.AddComponentData(entity, default(Updated));
+            }
+
+            var nodes = GetOrCreateBuffer<Node>(entity);
             nodes.ResizeUninitialized(4);
             nodes[0] = new Node(new float3(min.x, 0f, min.y), float.MinValue);
             nodes[1] = new Node(new float3(min.x, 0f, max.y), float.MinValue);
             nodes[2] = new Node(new float3(max.x, 0f, max.y), float.MinValue);
             nodes[3] = new Node(new float3(max.x, 0f, min.y), float.MinValue);
 
-            var triangles = EntityManager.GetBuffer<Triangle>(entity);
+            var triangles = GetOrCreateBuffer<Triangle>(entity);
             triangles.ResizeUninitialized(2);
             triangles[0] = new Triangle(0, 1, 2);
             triangles[1] = new Triangle(0, 2, 3);
 
             Mod.log.Info(
-                $"Created parcel blocker entity {FormatEntity(entity)} rect min={ParcelBounds.Format(min)}, max={ParcelBounds.Format(max)}, area={(max.x - min.x) * (max.y - min.y):F0}, components=Area+Node+Triangle+Geometry+PrefabRef+Native+Updated.");
+                $"{(created ? "Created" : "Updated")} parcel blocker entity {FormatEntity(entity)} rect min={ParcelBounds.Format(min)}, max={ParcelBounds.Format(max)}, area={(max.x - min.x) * (max.y - min.y):F0}, components=Area+Node+Triangle+Geometry+PrefabRef+Native+Updated.");
+        }
+
+        private void UpsertComponent<T>(Entity entity, T value) where T : unmanaged, IComponentData
+        {
+            if (EntityManager.HasComponent<T>(entity))
+            {
+                EntityManager.SetComponentData(entity, value);
+            }
+            else
+            {
+                EntityManager.AddComponentData(entity, value);
+            }
+        }
+
+        private DynamicBuffer<T> GetOrCreateBuffer<T>(Entity entity) where T : unmanaged, IBufferElementData
+        {
+            if (!EntityManager.HasBuffer<T>(entity))
+            {
+                return EntityManager.AddBuffer<T>(entity);
+            }
+
+            return EntityManager.GetBuffer<T>(entity);
         }
 
         private void LogPrefabDiagnostics(Entity prefab, int prefabCount)
