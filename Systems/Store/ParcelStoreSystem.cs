@@ -166,6 +166,11 @@ namespace CustomLandParcel.Systems
             return Store.TryGetActiveUnionBounds(out min, out max);
         }
 
+        internal bool TryGetPurchasedUnionBounds(out float2 min, out float2 max)
+        {
+            return Store.TryGetPurchasedUnionBounds(out min, out max);
+        }
+
         internal string GetSummary()
         {
             return Store.GetSummary();

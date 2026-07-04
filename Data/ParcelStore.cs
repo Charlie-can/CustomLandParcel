@@ -446,6 +446,11 @@ namespace CustomLandParcel.Data
                    || ParcelGeometry.TryGetUnionBounds(_mParcels, out min, out max);
         }
 
+        public bool TryGetPurchasedUnionBounds(out float2 min, out float2 max)
+        {
+            return ParcelGeometry.TryGetUnionBounds(_mParcels.Where(parcel => parcel.IsPurchased), out min, out max);
+        }
+
         public void ReplaceFromSave(
             IEnumerable<LandParcel> parcels,
             Guid selectedParcelId,

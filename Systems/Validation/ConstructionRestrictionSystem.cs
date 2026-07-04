@@ -5,6 +5,7 @@ using Game.Notifications;
 using Game.Objects;
 using Game.Prefabs;
 using Game.Tools;
+using CustomLandParcel.Geometry;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -25,6 +26,7 @@ namespace CustomLandParcel.Systems
         private int _mLastInvalidCount = -1;
         private int _mLastIconCount = -1;
         private int _mMissingPrefabLogCooldownFrames;
+        private int _mCurveOutsideLogCooldownFrames;
         private int _mFramesSinceLog;
         private int _mNoPreviewLogCooldownFrames;
 
@@ -153,12 +155,17 @@ namespace CustomLandParcel.Systems
                     }
 
                     var curve = curves[i].m_Bezier;
-                    var valid = PlacementPreviewUtility.CurveInsideParcel(curve, _mParcelStoreSystem);
+                    var valid = PlacementPreviewUtility.TryGetFirstOutsideCurveSample(
+                        curve,
+                        _mParcelStoreSystem,
+                        out var outsidePoint,
+                        out var outsideSample);
                     var iconPosition = PlacementPreviewUtility.EvaluateBezier(curve, 0.5f);
                     SetRestrictionError(entity, !valid, iconPosition, iconCommandBuffer, ref iconCount);
 
                     if (!valid)
                     {
+                        LogCurveOutsideParcel(entity, temp, outsidePoint, outsideSample);
                         invalidCount++;
                     }
                 }
@@ -171,6 +178,19 @@ namespace CustomLandParcel.Systems
                 temps.Dispose();
                 curves.Dispose();
             }
+        }
+
+        private void LogCurveOutsideParcel(Entity entity, Temp temp, float3 outsidePoint, float outsideSample)
+        {
+            if (_mCurveOutsideLogCooldownFrames > 0)
+            {
+                _mCurveOutsideLogCooldownFrames--;
+                return;
+            }
+
+            Mod.log.Info(
+                $"Parcel validation blocked curve preview: entity={FormatEntity(entity)}, firstOutsideSample={outsideSample:F2}, firstOutsidePoint={ParcelGeometry.Format(outsidePoint.xz)}, tempFlags={temp.m_Flags}. {_mParcelStoreSystem.GetSummary()}.");
+            _mCurveOutsideLogCooldownFrames = 30;
         }
 
         private void SetRestrictionError(
