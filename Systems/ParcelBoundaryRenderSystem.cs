@@ -1,4 +1,5 @@
 ﻿using Game;
+using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -16,6 +17,7 @@ namespace CustomLandParcel.Systems
         private GameObject _mLineObject;
         private LineRenderer _mLineRenderer;
         private Material _mMaterial;
+        private readonly List<LineRenderer> _mAreaMarkerRenderers = new List<LineRenderer>();
 
         protected override void OnCreate()
         {
@@ -38,6 +40,8 @@ namespace CustomLandParcel.Systems
                 _mMaterial = null;
             }
 
+            _mAreaMarkerRenderers.Clear();
+
             base.OnDestroy();
         }
 
@@ -58,22 +62,12 @@ namespace CustomLandParcel.Systems
 
             _mLineObject = new GameObject("Custom Land Parcel MVP Boundary");
             Object.DontDestroyOnLoad(_mLineObject);
-            _mLineRenderer = _mLineObject.AddComponent<LineRenderer>();
-            _mLineRenderer.useWorldSpace = true;
-            _mLineRenderer.loop = true;
-            _mLineRenderer.positionCount = 4;
-            _mLineRenderer.widthMultiplier = 18f;
-            _mLineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _mLineRenderer.receiveShadows = false;
-            _mLineRenderer.startColor = new Color(0f, 0.95f, 1f, 0.95f);
-            _mLineRenderer.endColor = new Color(0f, 0.95f, 1f, 0.95f);
 
             var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color");
             if (shader != null)
             {
                 _mMaterial = new Material(shader);
-                SetMaterialColor(_mMaterial, new Color(0f, 0.95f, 1f, 0.95f));
-                _mLineRenderer.material = _mMaterial;
+                SetMaterialColor(_mMaterial, new Color(0.05f, 1f, 0.35f, 0.95f));
                 Mod.log.Info($"Parcel boundary renderer material created with shader '{shader.name}'.");
             }
             else
@@ -85,13 +79,80 @@ namespace CustomLandParcel.Systems
             var min = ConstructionRestrictionSystem.ParcelMin;
             var max = ConstructionRestrictionSystem.ParcelMax;
             const float y = 80f;
+            var boundaryColor = new Color(0.05f, 1f, 0.35f, 0.98f);
+            var markerColor = new Color(0.05f, 1f, 0.35f, 0.42f);
+
+            _mLineRenderer = CreateRenderer("Buildable Area Outer Boundary", true, 4, 24f, boundaryColor);
             _mLineRenderer.SetPosition(0, ToVector3(new float3(min.x, y, min.y)));
             _mLineRenderer.SetPosition(1, ToVector3(new float3(max.x, y, min.y)));
             _mLineRenderer.SetPosition(2, ToVector3(new float3(max.x, y, max.y)));
             _mLineRenderer.SetPosition(3, ToVector3(new float3(min.x, y, max.y)));
 
+            CreateBuildableAreaMarkers(min, max, y + 2f, markerColor);
+
             Mod.log.Info(
-                $"Parcel boundary renderer points: ({min.x:F1}, {y:F1}, {min.y:F1}) -> ({max.x:F1}, {y:F1}, {min.y:F1}) -> ({max.x:F1}, {y:F1}, {max.y:F1}) -> ({min.x:F1}, {y:F1}, {max.y:F1}); width={_mLineRenderer.widthMultiplier:F1}.");
+                $"Parcel buildable area marker created: parcel={FormatFloat2(min)}..{FormatFloat2(max)}, boundaryWidth={_mLineRenderer.widthMultiplier:F1}, interiorMarkerLines={_mAreaMarkerRenderers.Count}.");
+        }
+
+        private void CreateBuildableAreaMarkers(float2 min, float2 max, float y, Color markerColor)
+        {
+            const int divisions = 4;
+            for (var i = 1; i < divisions; i++)
+            {
+                var t = i / (float)divisions;
+                var x = math.lerp(min.x, max.x, t);
+                var z = math.lerp(min.y, max.y, t);
+                CreateMarkerSegment(
+                    $"Buildable Area Vertical Marker {i}",
+                    new float3(x, y, min.y),
+                    new float3(x, y, max.y),
+                    markerColor);
+                CreateMarkerSegment(
+                    $"Buildable Area Horizontal Marker {i}",
+                    new float3(min.x, y, z),
+                    new float3(max.x, y, z),
+                    markerColor);
+            }
+
+            CreateMarkerSegment(
+                "Buildable Area Diagonal Marker A",
+                new float3(min.x, y, min.y),
+                new float3(max.x, y, max.y),
+                markerColor);
+            CreateMarkerSegment(
+                "Buildable Area Diagonal Marker B",
+                new float3(min.x, y, max.y),
+                new float3(max.x, y, min.y),
+                markerColor);
+        }
+
+        private void CreateMarkerSegment(string name, float3 start, float3 end, Color color)
+        {
+            var renderer = CreateRenderer(name, false, 2, 8f, color);
+            renderer.SetPosition(0, ToVector3(start));
+            renderer.SetPosition(1, ToVector3(end));
+            _mAreaMarkerRenderers.Add(renderer);
+        }
+
+        private LineRenderer CreateRenderer(string name, bool loop, int positionCount, float width, Color color)
+        {
+            var child = new GameObject(name);
+            child.transform.SetParent(_mLineObject.transform, false);
+            var renderer = child.AddComponent<LineRenderer>();
+            renderer.useWorldSpace = true;
+            renderer.loop = loop;
+            renderer.positionCount = positionCount;
+            renderer.widthMultiplier = width;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.startColor = color;
+            renderer.endColor = color;
+            if (_mMaterial != null)
+            {
+                renderer.material = _mMaterial;
+            }
+
+            return renderer;
         }
 
         private static Vector3 ToVector3(float3 value)
@@ -111,6 +172,11 @@ namespace CustomLandParcel.Systems
             {
                 material.SetColor(kColor, color);
             }
+        }
+
+        private static string FormatFloat2(float2 value)
+        {
+            return $"({value.x:F1}, {value.y:F1})";
         }
     }
 }
