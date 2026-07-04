@@ -1,5 +1,13 @@
 const path = require("path");
+const webpack = require("webpack");
 const TerserPlugin = require("terser-webpack-plugin");
+
+const moduleBanner = `Cities: Skylines II UI Module
+
+Id: CustomLandParcelUI
+Author: CustomLandParcel
+Version: 1.0.0
+Dependencies:`;
 
 module.exports = {
   mode: "production",
@@ -40,7 +48,7 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, "build"),
-    filename: "[name].js",
+    filename: "[name].mjs",
     library: {
       type: "module",
     },
@@ -58,4 +66,9 @@ module.exports = {
   experiments: {
     outputModule: true,
   },
+  plugins: [
+    new webpack.BannerPlugin({
+      banner: moduleBanner,
+    }),
+  ],
 };

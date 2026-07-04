@@ -108,7 +108,7 @@
 		</PropertyGroup>
 		<ItemGroup>
 			<CustomLandParcelUIFiles Include="$(MSBuildProjectDirectory)\GameUI\mod.json" />
-			<CustomLandParcelUIFiles Include="$(MSBuildProjectDirectory)\GameUI\build\**\*.*" />
+			<CustomLandParcelUIFiles Include="$(MSBuildProjectDirectory)\GameUI\build\*.mjs" />
 		</ItemGroup>
 		<Message Text="Copy CustomLandParcel UI module to $(CustomLandParcelUIDeployDir)" Importance="high" />
 		<RemoveDir Directories="$(CustomLandParcelUIDeployDir)" />
