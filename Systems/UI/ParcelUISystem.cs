@@ -78,6 +78,7 @@ namespace CustomLandParcel.Systems
             if (_mLastLoggedVersion != _mParcelStoreSystem.Version)
             {
                 _mLastLoggedVersion = _mParcelStoreSystem.Version;
+                _mParcelsBinding.Update();
                 Mod.log.Info($"ParcelUISystem observed store change: {_mParcelStoreSystem.GetSummary()}.");
             }
         }

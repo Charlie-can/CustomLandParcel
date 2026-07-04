@@ -21,6 +21,10 @@
 		<EntitiesVersion Condition="'$(EntitiesVersion)' == '' And '$(CSII_ENTITIESVERSION)' != ''">$(CSII_ENTITIESVERSION)</EntitiesVersion>
 		<EntityPackagePath Condition="'$(EntityPackagePath)' == '' And '$(UnityModProjectPath)' != '' And '$(EntitiesVersion)' != ''">$(UnityModProjectPath)\Library\PackageCache\com.unity.entities@$(EntitiesVersion)\Unity.Entities\SourceGenerators</EntityPackagePath>
 		<MSCORLIBPath Condition="'$(MSCORLIBPath)' == '' And '$(CSII_MSCORLIBPATH)' != ''">$(CSII_MSCORLIBPATH)</MSCORLIBPath>
+		<NodeExe Condition="'$(NodeExe)' == '' And Exists('$(USERPROFILE)\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe')">$(USERPROFILE)\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe</NodeExe>
+		<NodeExe Condition="'$(NodeExe)' == ''">node</NodeExe>
+		<PnpmExe Condition="'$(PnpmExe)' == '' And Exists('$(USERPROFILE)\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin\pnpm.cmd')">$(USERPROFILE)\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin\pnpm.cmd</PnpmExe>
+		<PnpmExe Condition="'$(PnpmExe)' == ''">pnpm</PnpmExe>
 	</PropertyGroup>
 
 	<Import Project="$(CSII_TOOLPATH)\Mod.targets" Condition="'$(CSII_TOOLPATH)' != '' And Exists('$(CSII_TOOLPATH)\Mod.targets')" />
@@ -88,6 +92,29 @@
 		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
 		<None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
+
+	<Target Name="BuildCustomLandParcelUI" BeforeTargets="BeforeBuild" Condition="'$(NeedBuild)'">
+		<PropertyGroup>
+			<CustomLandParcelUIDir>$(MSBuildProjectDirectory)\GameUI</CustomLandParcelUIDir>
+		</PropertyGroup>
+		<Message Text="Build CustomLandParcel UI module using $(PnpmExe) and $(NodeExe)" Importance="high" />
+		<Exec WorkingDirectory="$(CustomLandParcelUIDir)" Command="&quot;$(PnpmExe)&quot; install --frozen-lockfile" Condition="!Exists('$(CustomLandParcelUIDir)\node_modules\.modules.yaml')" />
+		<Exec WorkingDirectory="$(CustomLandParcelUIDir)" Command="&quot;$(NodeExe)&quot; &quot;$(CustomLandParcelUIDir)\node_modules\webpack\bin\webpack.js&quot; --config webpack.config.js" />
+	</Target>
+
+	<Target Name="DeployCustomLandParcelUI" AfterTargets="DeployWIP" Condition="'$(NeedBuild)' And '$(UserDataFullPath)' != ''">
+		<PropertyGroup>
+			<CustomLandParcelUIDeployDir>$(UserDataFullPath)\Mods\CustomLandParcelUI</CustomLandParcelUIDeployDir>
+		</PropertyGroup>
+		<ItemGroup>
+			<CustomLandParcelUIFiles Include="$(MSBuildProjectDirectory)\GameUI\mod.json" />
+			<CustomLandParcelUIFiles Include="$(MSBuildProjectDirectory)\GameUI\build\**\*.*" />
+		</ItemGroup>
+		<Message Text="Copy CustomLandParcel UI module to $(CustomLandParcelUIDeployDir)" Importance="high" />
+		<RemoveDir Directories="$(CustomLandParcelUIDeployDir)" />
+		<MakeDir Directories="$(CustomLandParcelUIDeployDir)" />
+		<Copy SourceFiles="@(CustomLandParcelUIFiles)" DestinationFiles="@(CustomLandParcelUIFiles->'$(CustomLandParcelUIDeployDir)\%(RecursiveDir)%(Filename)%(Extension)')" />
+	</Target>
 
 </Project>
 
