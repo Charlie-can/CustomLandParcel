@@ -24,33 +24,35 @@ namespace CustomLandParcel.Compatibility
         {
         }
 
-        private EntityQuery m_MapTilePrefabQuery;
-        private EntityQuery m_MapTileQuery;
-        private EntityQuery m_BlockerQuery;
-        private EntityQuery m_BlockerReadyQuery;
-        private ParcelStoreSystem m_ParcelStoreSystem;
-        private bool m_Created;
-        private uint m_AppliedParcelVersion;
-        private uint m_PendingParcelVersion;
-        private int m_RebuildDelayFramesRemaining;
-        private int m_VerificationFramesRemaining;
+        private EntityQuery _mMapTilePrefabQuery;
+        private EntityQuery _mMapTileQuery;
+        private EntityQuery _mBlockerQuery;
+        private EntityQuery _mBlockerReadyQuery;
+        private ParcelStoreSystem _mParcelStoreSystem;
+        private bool _mCreated;
+        private uint _mAppliedParcelVersion;
+        private uint _mPendingParcelVersion;
+        private int _mRebuildDelayFramesRemaining;
+        private int _mVerificationFramesRemaining;
+        private bool _mLastCompatibilityEnabled;
+        private int _mDisabledLogCooldownFrames;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
-            m_MapTilePrefabQuery = GetEntityQuery(
+            _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            _mMapTilePrefabQuery = GetEntityQuery(
                 ComponentType.ReadOnly<MapTileData>(),
                 ComponentType.ReadOnly<AreaData>(),
                 ComponentType.ReadOnly<PrefabData>());
-            m_MapTileQuery = GetEntityQuery(
+            _mMapTileQuery = GetEntityQuery(
                 ComponentType.ReadOnly<MapTile>(),
                 ComponentType.ReadOnly<Node>(),
                 ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<Temp>(),
                 ComponentType.Exclude<VanillaMapTileBlocker>());
-            m_BlockerQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileBlocker>());
-            m_BlockerReadyQuery = GetEntityQuery(
+            _mBlockerQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileBlocker>());
+            _mBlockerReadyQuery = GetEntityQuery(
                 ComponentType.ReadOnly<VanillaMapTileBlocker>(),
                 ComponentType.ReadOnly<Area>(),
                 ComponentType.ReadOnly<Node>(),
@@ -63,28 +65,41 @@ namespace CustomLandParcel.Compatibility
 
         protected override void OnUpdate()
         {
-            var currentVersion = m_ParcelStoreSystem.Version;
-            if (m_Created && m_AppliedParcelVersion == currentVersion)
+            if (!IsCompatibilityEnabled())
+            {
+                DisableCompatibilityLayer();
+                return;
+            }
+
+            if (!_mLastCompatibilityEnabled)
+            {
+                _mLastCompatibilityEnabled = true;
+                Mod.log.Info(
+                    $"VanillaMapTileBlockerSystem compatibility layer enabled by settings. {_mParcelStoreSystem.GetSummary()}.");
+            }
+
+            var currentVersion = _mParcelStoreSystem.Version;
+            if (_mCreated && _mAppliedParcelVersion == currentVersion)
             {
                 VerifyBlockersAfterCreation();
                 return;
             }
 
-            if (m_Created && !ParcelChangeReadyToApply(currentVersion))
+            if (_mCreated && !ParcelChangeReadyToApply(currentVersion))
             {
                 return;
             }
 
-            if (m_MapTilePrefabQuery.IsEmptyIgnoreFilter || m_MapTileQuery.IsEmptyIgnoreFilter)
+            if (_mMapTilePrefabQuery.IsEmptyIgnoreFilter || _mMapTileQuery.IsEmptyIgnoreFilter)
             {
-                if (m_VerificationFramesRemaining == 0)
+                if (_mVerificationFramesRemaining == 0)
                 {
                     Mod.log.Info(
-                        $"Parcel blocker waiting: prefabQueryEmpty={m_MapTilePrefabQuery.IsEmptyIgnoreFilter}, mapTileQueryEmpty={m_MapTileQuery.IsEmptyIgnoreFilter}, {m_ParcelStoreSystem.GetSummary()}.");
-                    m_VerificationFramesRemaining = 120;
+                        $"Parcel blocker waiting: prefabQueryEmpty={_mMapTilePrefabQuery.IsEmptyIgnoreFilter}, mapTileQueryEmpty={_mMapTileQuery.IsEmptyIgnoreFilter}, {_mParcelStoreSystem.GetSummary()}.");
+                    _mVerificationFramesRemaining = 120;
                 }
 
-                m_VerificationFramesRemaining--;
+                _mVerificationFramesRemaining--;
                 return;
             }
 
@@ -93,25 +108,25 @@ namespace CustomLandParcel.Compatibility
                 return;
             }
 
-            if (!m_ParcelStoreSystem.TryGetActiveUnionBounds(out var parcelMin, out var parcelMax))
+            if (!_mParcelStoreSystem.TryGetActiveUnionBounds(out var parcelMin, out var parcelMax))
             {
-                Mod.log.Warn($"Parcel blocker skipped: no parcel union bounds. {m_ParcelStoreSystem.GetSummary()}.");
+                Mod.log.Warn($"Parcel blocker skipped: no parcel union bounds. {_mParcelStoreSystem.GetSummary()}.");
                 return;
             }
 
-            var prefabs = m_MapTilePrefabQuery.ToEntityArray(Allocator.Temp);
+            var prefabs = _mMapTilePrefabQuery.ToEntityArray(Allocator.Temp);
             try
             {
                 var prefab = prefabs[0];
                 LogPrefabDiagnostics(prefab, prefabs.Length);
                 UpsertBlockers(prefab, worldMin, worldMax, parcelMin, parcelMax);
-                m_Created = true;
-                m_AppliedParcelVersion = currentVersion;
-                m_PendingParcelVersion = 0;
-                m_RebuildDelayFramesRemaining = 0;
-                m_VerificationFramesRemaining = 120;
+                _mCreated = true;
+                _mAppliedParcelVersion = currentVersion;
+                _mPendingParcelVersion = 0;
+                _mRebuildDelayFramesRemaining = 0;
+                _mVerificationFramesRemaining = 120;
                 Mod.log.Info(
-                    $"Applied vanilla MapTile-style blockers around active parcel union. World bounds x/z {ParcelGeometry.Format(worldMin)}..{ParcelGeometry.Format(worldMax)}; activeParcelBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}; {m_ParcelStoreSystem.GetSummary()}.");
+                    $"Applied vanilla MapTile-style blockers around active parcel union. World bounds x/z {ParcelGeometry.Format(worldMin)}..{ParcelGeometry.Format(worldMax)}; activeParcelBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}; {_mParcelStoreSystem.GetSummary()}.");
             }
             finally
             {
@@ -119,20 +134,54 @@ namespace CustomLandParcel.Compatibility
             }
         }
 
+        private static bool IsCompatibilityEnabled()
+        {
+            return Mod.Settings != null && Mod.Settings.EnableVanillaMapTileCompatibility;
+        }
+
+        private void DisableCompatibilityLayer()
+        {
+            if (_mCreated || !_mBlockerQuery.IsEmptyIgnoreFilter)
+            {
+                using var blockers = _mBlockerQuery.ToEntityArray(Allocator.Temp);
+                for (var i = 0; i < blockers.Length; i++)
+                {
+                    EntityManager.DestroyEntity(blockers[i]);
+                }
+
+                Mod.log.Info(
+                    $"VanillaMapTileBlockerSystem compatibility layer disabled; destroyed {blockers.Length} blocker entity/entities.");
+            }
+            else if (_mDisabledLogCooldownFrames <= 0)
+            {
+                Mod.log.Info(
+                    "VanillaMapTileBlockerSystem compatibility layer is disabled by settings. Direct ConstructionRestrictionSystem remains the primary validation path.");
+                _mDisabledLogCooldownFrames = 600;
+            }
+
+            _mCreated = false;
+            _mLastCompatibilityEnabled = false;
+            _mAppliedParcelVersion = 0;
+            _mPendingParcelVersion = 0;
+            _mRebuildDelayFramesRemaining = 0;
+            _mVerificationFramesRemaining = 0;
+            _mDisabledLogCooldownFrames--;
+        }
+
         private bool ParcelChangeReadyToApply(uint currentVersion)
         {
-            if (m_PendingParcelVersion != currentVersion)
+            if (_mPendingParcelVersion != currentVersion)
             {
-                m_PendingParcelVersion = currentVersion;
-                m_RebuildDelayFramesRemaining = RebuildDelayFrames;
+                _mPendingParcelVersion = currentVersion;
+                _mRebuildDelayFramesRemaining = RebuildDelayFrames;
                 Mod.log.Info(
-                    $"Parcel blocker rebuild queued after parcel change. appliedVersion={m_AppliedParcelVersion}, pendingVersion={m_PendingParcelVersion}, delayFrames={RebuildDelayFrames}, {m_ParcelStoreSystem.GetSummary()}.");
+                    $"Parcel blocker rebuild queued after parcel change. appliedVersion={_mAppliedParcelVersion}, pendingVersion={_mPendingParcelVersion}, delayFrames={RebuildDelayFrames}, {_mParcelStoreSystem.GetSummary()}.");
                 return false;
             }
 
-            if (m_RebuildDelayFramesRemaining > 0)
+            if (_mRebuildDelayFramesRemaining > 0)
             {
-                m_RebuildDelayFramesRemaining--;
+                _mRebuildDelayFramesRemaining--;
                 return false;
             }
 
@@ -144,7 +193,7 @@ namespace CustomLandParcel.Compatibility
             worldMin = new float2(float.MaxValue, float.MaxValue);
             worldMax = new float2(float.MinValue, float.MinValue);
 
-            var entities = m_MapTileQuery.ToEntityArray(Allocator.Temp);
+            var entities = _mMapTileQuery.ToEntityArray(Allocator.Temp);
             try
             {
                 if (entities.Length == 0)
@@ -177,7 +226,7 @@ namespace CustomLandParcel.Compatibility
 
         private void UpsertBlockers(Entity prefab, float2 worldMin, float2 worldMax, float2 parcelMin, float2 parcelMax)
         {
-            using var existing = m_BlockerQuery.ToEntityArray(Allocator.Temp);
+            using var existing = _mBlockerQuery.ToEntityArray(Allocator.Temp);
             var blockerCount = 0;
 
             UpsertBlocker(prefab, existing, blockerCount++, new float2(worldMin.x, worldMin.y), new float2(parcelMin.x, worldMax.y));
@@ -278,24 +327,24 @@ namespace CustomLandParcel.Compatibility
 
         private void VerifyBlockersAfterCreation()
         {
-            if (m_VerificationFramesRemaining <= 0)
+            if (_mVerificationFramesRemaining <= 0)
             {
                 return;
             }
 
-            if (m_VerificationFramesRemaining == 120 || m_VerificationFramesRemaining == 60 ||
-                m_VerificationFramesRemaining == 1)
+            if (_mVerificationFramesRemaining == 120 || _mVerificationFramesRemaining == 60 ||
+                _mVerificationFramesRemaining == 1)
             {
                 Mod.log.Info(
-                    $"Parcel blocker verification: totalMarked={m_BlockerQuery.CalculateEntityCount()}, readyForAreaSearch={m_BlockerReadyQuery.CalculateEntityCount()}, updatedStillPresent={CountBlockersWithUpdated()}, appliedVersion={m_AppliedParcelVersion}, {m_ParcelStoreSystem.GetSummary()}.");
+                    $"Parcel blocker verification: totalMarked={_mBlockerQuery.CalculateEntityCount()}, readyForAreaSearch={_mBlockerReadyQuery.CalculateEntityCount()}, updatedStillPresent={CountBlockersWithUpdated()}, appliedVersion={_mAppliedParcelVersion}, {_mParcelStoreSystem.GetSummary()}.");
             }
 
-            m_VerificationFramesRemaining--;
+            _mVerificationFramesRemaining--;
         }
 
         private int CountBlockersWithUpdated()
         {
-            var entities = m_BlockerQuery.ToEntityArray(Allocator.Temp);
+            var entities = _mBlockerQuery.ToEntityArray(Allocator.Temp);
             try
             {
                 var count = 0;

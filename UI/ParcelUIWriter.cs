@@ -1,6 +1,7 @@
 using Colossal.UI.Binding;
 using CustomLandParcel.Data;
 using CustomLandParcel.Geometry;
+using Unity.Mathematics;
 
 namespace CustomLandParcel.UI
 {
@@ -9,9 +10,8 @@ namespace CustomLandParcel.UI
         public static void WriteParcels(IJsonWriter writer, ParcelStore store)
         {
             writer.ArrayBegin((uint)store.Parcels.Count);
-            for (var i = 0; i < store.Parcels.Count; i++)
+            foreach (var parcel in store.Parcels)
             {
-                var parcel = store.Parcels[i];
                 PolygonMath.TryGetBounds(parcel.Points, out var min, out var max);
                 writer.TypeBegin("customLandParcel.Parcel");
                 writer.PropertyName("id");
@@ -32,9 +32,9 @@ namespace CustomLandParcel.UI
                 writer.Write(max);
                 writer.PropertyName("points");
                 writer.ArrayBegin((uint)parcel.Points.Count);
-                for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
+                foreach (var t in parcel.Points)
                 {
-                    writer.Write(parcel.Points[pointIndex]);
+                    writer.Write(t);
                 }
 
                 writer.ArrayEnd();

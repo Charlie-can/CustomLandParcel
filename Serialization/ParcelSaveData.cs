@@ -19,17 +19,16 @@ namespace CustomLandParcel.Serialization
             writer.Write(store.SelectedParcelId.ToString("N"));
             writer.Write(store.SelectedVertexIndex);
             writer.Write(store.Parcels.Count);
-            for (var i = 0; i < store.Parcels.Count; i++)
+            foreach (var parcel in store.Parcels)
             {
-                var parcel = store.Parcels[i];
                 writer.Write(parcel.Id.ToString("N"));
                 writer.Write(parcel.Name ?? string.Empty);
                 writer.Write((int)parcel.State);
                 writer.Write(parcel.Price);
                 writer.Write(parcel.Points.Count);
-                for (var j = 0; j < parcel.Points.Count; j++)
+                foreach (var t in parcel.Points)
                 {
-                    writer.Write(parcel.Points[j]);
+                    writer.Write(t);
                 }
             }
         }

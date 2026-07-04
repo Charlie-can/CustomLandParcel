@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 
 namespace CustomLandParcel.Geometry
@@ -59,11 +60,7 @@ namespace CustomLandParcel.Geometry
                 return float2.zero;
             }
 
-            var sum = float2.zero;
-            for (var i = 0; i < polygon.Count; i++)
-            {
-                sum += polygon[i];
-            }
+            var sum = polygon.Aggregate(float2.zero, (current, t) => current + t);
 
             return sum / polygon.Count;
         }
@@ -77,10 +74,10 @@ namespace CustomLandParcel.Geometry
                 return false;
             }
 
-            for (var i = 0; i < polygon.Count; i++)
+            foreach (var t in polygon)
             {
-                min = math.min(min, polygon[i]);
-                max = math.max(max, polygon[i]);
+                min = math.min(min, t);
+                max = math.max(max, t);
             }
 
             return math.all(min <= max);

@@ -1,11 +1,15 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using Colossal.Localization;
 using Game.SceneFlow;
+using Newtonsoft.Json;
 
 namespace CustomLandParcel
 {
     internal static class CustomLandParcelLocalization
     {
+        private const string LocalizationDirectoryName = "Localization";
         private static readonly List<SourceRegistration> Registrations = new List<SourceRegistration>();
 
         public static void Register(CustomLandParcelSettings settings)
@@ -17,13 +21,20 @@ namespace CustomLandParcel
                 return;
             }
 
-            RegisterLocale(manager, "en-US", CreateEnglish(settings));
-            RegisterLocale(manager, "zh-HANS", CreateChinese(settings));
-            RegisterLocale(manager, "zh-CN", CreateChinese(settings));
-            RegisterLocale(manager, "zh", CreateChinese(settings));
+            if (Registrations.Count > 0)
+            {
+                Mod.log.Warn(
+                    $"CustomLandParcel localization register requested while {Registrations.Count} source(s) were already registered; removing old sources first.");
+                Unregister();
+            }
+
+            RegisterLocale(manager, settings, "en-US", "en-US");
+            RegisterLocale(manager, settings, "zh-HANS", "zh-HANS");
+            RegisterLocale(manager, settings, "zh-CN", "zh-HANS");
+            RegisterLocale(manager, settings, "zh", "zh-HANS");
 
             Mod.log.Info(
-                $"Registered CustomLandParcel localization sources. activeLocale={manager.activeLocaleId}, sourceCount={Registrations.Count}.");
+                $"Registered CustomLandParcel localization sources from files. activeLocale={manager.activeLocaleId}, sourceCount={Registrations.Count}.");
         }
 
         public static void Unregister()
@@ -47,150 +58,125 @@ namespace CustomLandParcel
 
         private static void RegisterLocale(
             LocalizationManager manager,
+            CustomLandParcelSettings settings,
             string localeId,
-            Dictionary<string, string> entries)
+            string fileLocaleId)
         {
+            var entries = LoadEntries(settings, fileLocaleId);
+            if (entries.Count == 0)
+            {
+                Mod.log.Warn($"Skipped CustomLandParcel localization locale={localeId}: no entries loaded from {fileLocaleId}.");
+                return;
+            }
+
             var source = new MemorySource(entries);
             manager.AddSource(localeId, source);
             Registrations.Add(new SourceRegistration(localeId, source));
+            Mod.log.Info($"Registered CustomLandParcel localization locale={localeId}, fileLocale={fileLocaleId}, entries={entries.Count}.");
         }
 
-        private static Dictionary<string, string> CreateChinese(CustomLandParcelSettings settings)
+        private static Dictionary<string, string> LoadEntries(CustomLandParcelSettings settings, string localeId)
         {
-            return CreateEntries(
-                settings,
-                "自定义地块边界",
-                "编辑当前存档中的可建造地块边界。",
-                "切换地块编辑模式",
-                "开启或关闭自定义地块边界编辑模式。",
-                "向北移动地块",
-                "将可建造地块向北移动一步。",
-                "向南移动地块",
-                "将可建造地块向南移动一步。",
-                "向西移动地块",
-                "将可建造地块向西移动一步。",
-                "向东移动地块",
-                "将可建造地块向东移动一步。",
-                "扩大地块",
-                "从中心向外扩大可建造地块。",
-                "缩小地块",
-                "从边缘向中心缩小可建造地块。");
-        }
-
-        private static Dictionary<string, string> CreateEnglish(CustomLandParcelSettings settings)
-        {
-            return CreateEntries(
-                settings,
-                "Custom Land Parcel",
-                "Edit the buildable parcel boundary stored in the current save.",
-                "Toggle parcel edit mode",
-                "Turns custom parcel boundary editing on or off.",
-                "Move parcel north",
-                "Moves the buildable parcel one step north.",
-                "Move parcel south",
-                "Moves the buildable parcel one step south.",
-                "Move parcel west",
-                "Moves the buildable parcel one step west.",
-                "Move parcel east",
-                "Moves the buildable parcel one step east.",
-                "Grow parcel",
-                "Expands the buildable parcel outward from its center.",
-                "Shrink parcel",
-                "Shrinks the buildable parcel inward toward its center.");
-        }
-
-        private static Dictionary<string, string> CreateEntries(
-            CustomLandParcelSettings settings,
-            string sectionName,
-            string sectionDescription,
-            string toggleLabel,
-            string toggleDescription,
-            string moveNorthLabel,
-            string moveNorthDescription,
-            string moveSouthLabel,
-            string moveSouthDescription,
-            string moveWestLabel,
-            string moveWestDescription,
-            string moveEastLabel,
-            string moveEastDescription,
-            string growLabel,
-            string growDescription,
-            string shrinkLabel,
-            string shrinkDescription)
-        {
-            var entries = new Dictionary<string, string>
+            var path = GetLocalizationPath(localeId);
+            if (!File.Exists(path))
             {
-                [settings.GetSettingsLocaleID()] = sectionName,
-                [settings.GetBindingMapLocaleID()] = sectionName,
-                ["Options.OPTION_DESCRIPTION[" + settings.id + "]"] = sectionDescription
-            };
+                Mod.log.Warn($"CustomLandParcel localization file not found: {path}");
+                return new Dictionary<string, string>();
+            }
 
-            AddAction(
-                entries,
-                settings,
-                nameof(CustomLandParcelSettings.ToggleEditMode),
-                CustomLandParcelSettings.ToggleEditModeAction,
-                toggleLabel,
-                toggleDescription);
-            AddAction(
-                entries,
-                settings,
-                nameof(CustomLandParcelSettings.MoveNorth),
-                CustomLandParcelSettings.MoveNorthAction,
-                moveNorthLabel,
-                moveNorthDescription);
-            AddAction(
-                entries,
-                settings,
-                nameof(CustomLandParcelSettings.MoveSouth),
-                CustomLandParcelSettings.MoveSouthAction,
-                moveSouthLabel,
-                moveSouthDescription);
-            AddAction(
-                entries,
-                settings,
-                nameof(CustomLandParcelSettings.MoveWest),
-                CustomLandParcelSettings.MoveWestAction,
-                moveWestLabel,
-                moveWestDescription);
-            AddAction(
-                entries,
-                settings,
-                nameof(CustomLandParcelSettings.MoveEast),
-                CustomLandParcelSettings.MoveEastAction,
-                moveEastLabel,
-                moveEastDescription);
-            AddAction(
-                entries,
-                settings,
-                nameof(CustomLandParcelSettings.Grow),
-                CustomLandParcelSettings.GrowAction,
-                growLabel,
-                growDescription);
-            AddAction(
-                entries,
-                settings,
-                nameof(CustomLandParcelSettings.Shrink),
-                CustomLandParcelSettings.ShrinkAction,
-                shrinkLabel,
-                shrinkDescription);
+            var entries = new Dictionary<string, string>();
+            Dictionary<string, string> rawEntries;
+            try
+            {
+                rawEntries = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(path));
+            }
+            catch (Exception exception)
+            {
+                Mod.log.Error(exception, $"Failed to read CustomLandParcel localization file: {path}");
+                return entries;
+            }
+
+            if (rawEntries == null)
+            {
+                Mod.log.Warn($"CustomLandParcel localization file contained no entries: {path}");
+                return entries;
+            }
+
+            foreach (var pair in rawEntries)
+            {
+                var key = ResolveKey(settings, pair.Key.Trim());
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    Mod.log.Warn($"Invalid localization key ignored: file={path}, key='{pair.Key}'.");
+                    continue;
+                }
+
+                entries[key] = pair.Value ?? string.Empty;
+            }
 
             return entries;
         }
 
-        private static void AddAction(
-            IDictionary<string, string> entries,
-            CustomLandParcelSettings settings,
-            string propertyName,
-            string actionName,
-            string label,
-            string description)
+        private static string GetLocalizationPath(string localeId)
         {
-            entries[settings.GetOptionLabelLocaleID(propertyName)] = label;
-            entries[settings.GetOptionDescLocaleID(propertyName)] = description;
-            entries[settings.GetBindingKeyLocaleID(actionName)] = label;
-            entries[settings.GetBindingKeyHintLocaleID(actionName)] = label;
-            entries["Options.OPTION_DESCRIPTION[" + settings.id + "/" + actionName + "/Press]"] = description;
+            var assemblyDirectory = Path.GetDirectoryName(typeof(CustomLandParcelLocalization).Assembly.Location);
+            if (string.IsNullOrEmpty(assemblyDirectory))
+            {
+                assemblyDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            }
+
+            return Path.Combine(assemblyDirectory, LocalizationDirectoryName, localeId + ".json");
+        }
+
+        private static string ResolveKey(CustomLandParcelSettings settings, string key)
+        {
+            if (key == "@settings")
+            {
+                return settings.GetSettingsLocaleID();
+            }
+
+            if (key == "@bindingMap")
+            {
+                return settings.GetBindingMapLocaleID();
+            }
+
+            if (key == "@sectionDescription")
+            {
+                return "Options.OPTION_DESCRIPTION[" + settings.id + "]";
+            }
+
+            const string optionLabelPrefix = "@optionLabel:";
+            if (key.StartsWith(optionLabelPrefix, StringComparison.Ordinal))
+            {
+                return settings.GetOptionLabelLocaleID(key.Substring(optionLabelPrefix.Length));
+            }
+
+            const string optionDescriptionPrefix = "@optionDescription:";
+            if (key.StartsWith(optionDescriptionPrefix, StringComparison.Ordinal))
+            {
+                return settings.GetOptionDescLocaleID(key.Substring(optionDescriptionPrefix.Length));
+            }
+
+            const string bindingKeyPrefix = "@bindingKey:";
+            if (key.StartsWith(bindingKeyPrefix, StringComparison.Ordinal))
+            {
+                return settings.GetBindingKeyLocaleID(key.Substring(bindingKeyPrefix.Length));
+            }
+
+            const string bindingHintPrefix = "@bindingHint:";
+            if (key.StartsWith(bindingHintPrefix, StringComparison.Ordinal))
+            {
+                return settings.GetBindingKeyHintLocaleID(key.Substring(bindingHintPrefix.Length));
+            }
+
+            const string bindingDescriptionPrefix = "@bindingDescription:";
+            if (key.StartsWith(bindingDescriptionPrefix, StringComparison.Ordinal))
+            {
+                return "Options.OPTION_DESCRIPTION[" + settings.id + "/" +
+                       key.Substring(bindingDescriptionPrefix.Length) + "/Press]";
+            }
+
+            return key;
         }
 
         private sealed class SourceRegistration

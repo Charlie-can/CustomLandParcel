@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using CustomLandParcel.Geometry;
 using Game;
 using Game.Common;
 using Game.Net;
@@ -75,7 +76,7 @@ namespace CustomLandParcel.Systems
             if (diagnostics.OutsideCount > 0 && diagnostics.OutsideWithErrorCount == 0)
             {
                 Mod.log.Warn(
-                    "Placement diagnostics: outside previews are not receiving Error. Vanilla area validation is not hitting our parcel blockers for these preview entities.");
+                    "Placement diagnostics: outside previews are not receiving Error. Check ConstructionRestrictionSystem registration first; enable vanilla map tile compatibility only if a tool bypasses the direct restriction path.");
             }
         }
 
@@ -199,7 +200,7 @@ namespace CustomLandParcel.Systems
             diagnostics.Samples.Append(" entity=");
             diagnostics.Samples.Append(FormatEntity(entity));
             diagnostics.Samples.Append(" point=");
-            diagnostics.Samples.Append(CustomLandParcel.Geometry.ParcelGeometry.Format(samplePoint));
+            diagnostics.Samples.Append(ParcelGeometry.Format(samplePoint));
             diagnostics.Samples.Append(" hasError=");
             diagnostics.Samples.Append(hasError);
             diagnostics.Samples.Append(" tempFlags=");
@@ -219,7 +220,7 @@ namespace CustomLandParcel.Systems
             public int OutsideCount;
             public int OutsideWithErrorCount;
             public int SampleCount;
-            public StringBuilder Samples = new StringBuilder();
+            public readonly StringBuilder Samples = new StringBuilder();
         }
     }
 }

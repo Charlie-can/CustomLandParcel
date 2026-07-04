@@ -5,7 +5,7 @@ using Unity.Mathematics;
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// Handles mod keybindings that edit the current save's parcel bounds.
+    /// Handles mod keybindings that edit the current save's selected parcel.
     /// </summary>
     public partial class ParcelBoundaryControlSystem : GameSystemBase
     {
@@ -151,11 +151,9 @@ namespace CustomLandParcel.Systems
                     $"Parcel control action ready: name={actionName}, enabled={action.enabled}, shouldBeEnabled={action.shouldBeEnabled}, isSet={action.isSet}, binding={action}.");
             }
 
-            if (enabledCount == ActionNames.Length)
-            {
-                m_ActionsEnabled = true;
-                Mod.log.Info($"Parcel control enabled {enabledCount}/{ActionNames.Length} input actions.");
-            }
+            if (enabledCount != ActionNames.Length) return;
+            m_ActionsEnabled = true;
+            Mod.log.Info($"Parcel control enabled {enabledCount}/{ActionNames.Length} input actions.");
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using CustomLandParcel.Geometry;
@@ -8,40 +8,40 @@ namespace CustomLandParcel.Data
 {
     internal sealed class ParcelStore
     {
-        private readonly List<LandParcel> _parcels = new List<LandParcel>();
-        private readonly Action<string> _info;
-        private readonly Action<string> _warn;
-        private ParcelSelection _selection = ParcelSelection.Empty;
-        private uint _version;
+        private readonly List<LandParcel> _mParcels = new List<LandParcel>();
+        private readonly Action<string> _mInfo;
+        private readonly Action<string> _mWarn;
+        private ParcelSelection _mSelection = ParcelSelection.Empty;
+        private uint _mVersion;
 
         public ParcelStore(Action<string> info, Action<string> warn)
         {
-            _info = info;
-            _warn = warn;
+            _mInfo = info;
+            _mWarn = warn;
         }
 
-        public IReadOnlyList<LandParcel> Parcels => _parcels;
+        public IReadOnlyList<LandParcel> Parcels => _mParcels;
 
-        public uint Version => _version;
+        public uint Version => _mVersion;
 
-        public Guid SelectedParcelId => _selection.ParcelId;
+        public Guid SelectedParcelId => _mSelection.ParcelId;
 
-        public int SelectedVertexIndex => _selection.VertexIndex;
+        public int SelectedVertexIndex => _mSelection.VertexIndex;
 
-        public LandParcel SelectedParcel => FindParcel(_selection.ParcelId);
+        public LandParcel SelectedParcel => FindParcel(_mSelection.ParcelId);
 
         public void Initialize(uint version, string reason)
         {
-            _version = math.max(1u, version);
+            _mVersion = math.max(1u, version);
             EnsureDefaultParcel(reason);
-            _info($"ParcelStore initialized. {GetSummary()}.");
+            _mInfo($"ParcelStore initialized. {GetSummary()}.");
         }
 
         public LandParcel CreateRectangle(string name, float2 center, float2 size, string reason)
         {
             var parcel = ParcelGeometry.CreateRectangle(name, center, size);
-            _parcels.Add(parcel);
-            _selection = new ParcelSelection(parcel.Id, 0);
+            _mParcels.Add(parcel);
+            _mSelection = new ParcelSelection(parcel.Id, 0);
             MarkChanged($"{reason}: created {parcel} and selected it");
             return parcel;
         }
@@ -51,14 +51,14 @@ namespace CustomLandParcel.Data
             var selected = SelectedParcel;
             if (selected == null)
             {
-                _warn($"Parcel delete ignored ({reason}): no selected parcel.");
+                _mWarn($"Parcel delete ignored ({reason}): no selected parcel.");
                 return false;
             }
 
-            _parcels.Remove(selected);
-            _selection.ParcelId = _parcels.Count == 0 ? Guid.Empty : _parcels[0].Id;
-            _selection.VertexIndex = ClampVertexIndex(SelectedParcel, _selection.VertexIndex);
-            MarkChanged($"{reason}: deleted {selected}, nextSelected={FormatGuid(_selection.ParcelId)}");
+            _mParcels.Remove(selected);
+            _mSelection.ParcelId = _mParcels.Count == 0 ? Guid.Empty : _mParcels[0].Id;
+            _mSelection.VertexIndex = ClampVertexIndex(SelectedParcel, _mSelection.VertexIndex);
+            MarkChanged($"{reason}: deleted {selected}, nextSelected={FormatGuid(_mSelection.ParcelId)}");
             return true;
         }
 
@@ -66,27 +66,28 @@ namespace CustomLandParcel.Data
         {
             if (id == Guid.Empty || FindParcel(id) == null)
             {
-                _warn($"Parcel selection ignored ({reason}): id={FormatGuid(id)} was not found.");
+                _mWarn($"Parcel selection ignored ({reason}): id={FormatGuid(id)} was not found.");
                 return false;
             }
 
-            _selection.ParcelId = id;
-            _selection.VertexIndex = ClampVertexIndex(SelectedParcel, _selection.VertexIndex);
-            MarkChanged($"{reason}: selected parcel={FormatGuid(_selection.ParcelId)}, vertex={_selection.VertexIndex}");
+            _mSelection.ParcelId = id;
+            _mSelection.VertexIndex = ClampVertexIndex(SelectedParcel, _mSelection.VertexIndex);
+            MarkChanged(
+                $"{reason}: selected parcel={FormatGuid(_mSelection.ParcelId)}, vertex={_mSelection.VertexIndex}");
             return true;
         }
 
         public bool SelectNextParcel(int direction, string reason)
         {
-            if (_parcels.Count == 0)
+            if (_mParcels.Count == 0)
             {
-                _warn($"Parcel select next ignored ({reason}): no parcels.");
+                _mWarn($"Parcel select next ignored ({reason}): no parcels.");
                 return false;
             }
 
-            var current = _parcels.FindIndex(parcel => parcel.Id == _selection.ParcelId);
-            current = current < 0 ? 0 : (current + direction + _parcels.Count) % _parcels.Count;
-            return SelectParcel(_parcels[current].Id, reason);
+            var current = _mParcels.FindIndex(parcel => parcel.Id == _mSelection.ParcelId);
+            current = current < 0 ? 0 : (current + direction + _mParcels.Count) % _mParcels.Count;
+            return SelectParcel(_mParcels[current].Id, reason);
         }
 
         public bool RenameSelectedParcel(string name, string reason)
@@ -94,7 +95,7 @@ namespace CustomLandParcel.Data
             var selected = SelectedParcel;
             if (selected == null)
             {
-                _warn($"Parcel rename ignored ({reason}): no selected parcel.");
+                _mWarn($"Parcel rename ignored ({reason}): no selected parcel.");
                 return false;
             }
 
@@ -109,7 +110,7 @@ namespace CustomLandParcel.Data
             var selected = SelectedParcel;
             if (selected == null)
             {
-                _warn($"Parcel purchase ignored ({reason}): no selected parcel.");
+                _mWarn($"Parcel purchase ignored ({reason}): no selected parcel.");
                 return false;
             }
 
@@ -123,7 +124,7 @@ namespace CustomLandParcel.Data
             var selected = SelectedParcel;
             if (selected == null)
             {
-                _warn($"Parcel move ignored ({reason}): no selected parcel.");
+                _mWarn($"Parcel move ignored ({reason}): no selected parcel.");
                 return false;
             }
 
@@ -141,7 +142,7 @@ namespace CustomLandParcel.Data
             var selected = SelectedParcel;
             if (selected == null)
             {
-                _warn($"Parcel resize ignored ({reason}): no selected parcel.");
+                _mWarn($"Parcel resize ignored ({reason}): no selected parcel.");
                 return false;
             }
 
@@ -167,33 +168,36 @@ namespace CustomLandParcel.Data
             var selected = SelectedParcel;
             if (selected == null)
             {
-                _warn($"Vertex selection ignored ({reason}): no selected parcel.");
+                _mWarn($"Vertex selection ignored ({reason}): no selected parcel.");
                 return false;
             }
 
             if (vertexIndex < 0 || vertexIndex >= selected.Points.Count)
             {
-                _warn($"Vertex selection ignored ({reason}): index={vertexIndex}, vertexCount={selected.Points.Count}.");
+                _mWarn(
+                    $"Vertex selection ignored ({reason}): index={vertexIndex}, vertexCount={selected.Points.Count}.");
                 return false;
             }
 
-            _selection.VertexIndex = vertexIndex;
-            MarkChanged($"{reason}: selected vertex={_selection.VertexIndex} parcel={FormatGuid(selected.Id)}");
+            _mSelection.VertexIndex = vertexIndex;
+            MarkChanged($"{reason}: selected vertex={_mSelection.VertexIndex} parcel={FormatGuid(selected.Id)}");
             return true;
         }
 
         public bool MoveSelectedVertex(float2 delta, string reason)
         {
             var selected = SelectedParcel;
-            if (selected == null || _selection.VertexIndex < 0 || _selection.VertexIndex >= selected.Points.Count)
+            if (selected == null || _mSelection.VertexIndex < 0 || _mSelection.VertexIndex >= selected.Points.Count)
             {
-                _warn($"Vertex move ignored ({reason}): selectedParcel={FormatGuid(_selection.ParcelId)}, selectedVertex={_selection.VertexIndex}.");
+                _mWarn(
+                    $"Vertex move ignored ({reason}): selectedParcel={FormatGuid(_mSelection.ParcelId)}, selectedVertex={_mSelection.VertexIndex}.");
                 return false;
             }
 
-            selected.Points[_selection.VertexIndex] += delta;
+            selected.Points[_mSelection.VertexIndex] += delta;
             ParcelGeometry.RecalculatePrice(selected);
-            MarkChanged($"{reason}: moved vertex={_selection.VertexIndex} by {ParcelGeometry.Format(delta)}, parcel={selected}");
+            MarkChanged(
+                $"{reason}: moved vertex={_mSelection.VertexIndex} by {ParcelGeometry.Format(delta)}, parcel={selected}");
             return true;
         }
 
@@ -202,48 +206,51 @@ namespace CustomLandParcel.Data
             var selected = SelectedParcel;
             if (selected == null || selected.Points.Count < ParcelGeometry.MinimumVertexCount)
             {
-                _warn($"Vertex insert ignored ({reason}): selected parcel is invalid.");
+                _mWarn($"Vertex insert ignored ({reason}): selected parcel is invalid.");
                 return false;
             }
 
-            var index = _selection.VertexIndex >= 0 ? _selection.VertexIndex : selected.Points.Count - 1;
+            var index = _mSelection.VertexIndex >= 0 ? _mSelection.VertexIndex : selected.Points.Count - 1;
             var nextIndex = (index + 1) % selected.Points.Count;
             var inserted = (selected.Points[index] + selected.Points[nextIndex]) * 0.5f;
             selected.Points.Insert(index + 1, inserted);
-            _selection.VertexIndex = index + 1;
+            _mSelection.VertexIndex = index + 1;
             ParcelGeometry.RecalculatePrice(selected);
-            MarkChanged($"{reason}: inserted vertex={_selection.VertexIndex} at {ParcelGeometry.Format(inserted)}, parcel={selected}");
+            MarkChanged(
+                $"{reason}: inserted vertex={_mSelection.VertexIndex} at {ParcelGeometry.Format(inserted)}, parcel={selected}");
             return true;
         }
 
         public bool DeleteSelectedVertex(string reason)
         {
             var selected = SelectedParcel;
-            if (selected == null || _selection.VertexIndex < 0 || _selection.VertexIndex >= selected.Points.Count)
+            if (selected == null || _mSelection.VertexIndex < 0 || _mSelection.VertexIndex >= selected.Points.Count)
             {
-                _warn($"Vertex delete ignored ({reason}): no selected vertex.");
+                _mWarn($"Vertex delete ignored ({reason}): no selected vertex.");
                 return false;
             }
 
             if (selected.Points.Count <= ParcelGeometry.MinimumVertexCount)
             {
-                _warn($"Vertex delete ignored ({reason}): parcel {FormatGuid(selected.Id)} already has minimum {ParcelGeometry.MinimumVertexCount} vertices.");
+                _mWarn(
+                    $"Vertex delete ignored ({reason}): parcel {FormatGuid(selected.Id)} already has minimum {ParcelGeometry.MinimumVertexCount} vertices.");
                 return false;
             }
 
-            var removed = selected.Points[_selection.VertexIndex];
-            selected.Points.RemoveAt(_selection.VertexIndex);
-            _selection.VertexIndex = ClampVertexIndex(selected, _selection.VertexIndex);
+            var removed = selected.Points[_mSelection.VertexIndex];
+            selected.Points.RemoveAt(_mSelection.VertexIndex);
+            _mSelection.VertexIndex = ClampVertexIndex(selected, _mSelection.VertexIndex);
             ParcelGeometry.RecalculatePrice(selected);
-            MarkChanged($"{reason}: deleted vertex at {ParcelGeometry.Format(removed)}, nextVertex={_selection.VertexIndex}, parcel={selected}");
+            MarkChanged(
+                $"{reason}: deleted vertex at {ParcelGeometry.Format(removed)}, nextVertex={_mSelection.VertexIndex}, parcel={selected}");
             return true;
         }
 
         public void ClearAllAndSeedDefault(string reason)
         {
-            var previousCount = _parcels.Count;
-            _parcels.Clear();
-            _selection = ParcelSelection.Empty;
+            var previousCount = _mParcels.Count;
+            _mParcels.Clear();
+            _mSelection = ParcelSelection.Empty;
             EnsureDefaultParcel(reason);
             MarkChanged($"{reason}: cleared {previousCount} parcel(s) and seeded default parcel.");
         }
@@ -255,9 +262,9 @@ namespace CustomLandParcel.Data
 
         public bool TryGetContainingPurchasedParcel(float2 position, out LandParcel parcel)
         {
-            for (var i = 0; i < _parcels.Count; i++)
+            for (var i = 0; i < _mParcels.Count; i++)
             {
-                var candidate = _parcels[i];
+                var candidate = _mParcels[i];
                 if (candidate.IsPurchased && PolygonMath.ContainsPoint(candidate.Points, position))
                 {
                     parcel = candidate;
@@ -271,8 +278,8 @@ namespace CustomLandParcel.Data
 
         public bool TryGetActiveUnionBounds(out float2 min, out float2 max)
         {
-            return ParcelGeometry.TryGetUnionBounds(_parcels.Where(parcel => parcel.IsPurchased), out min, out max)
-                   || ParcelGeometry.TryGetUnionBounds(_parcels, out min, out max);
+            return ParcelGeometry.TryGetUnionBounds(_mParcels.Where(parcel => parcel.IsPurchased), out min, out max)
+                   || ParcelGeometry.TryGetUnionBounds(_mParcels, out min, out max);
         }
 
         public void ReplaceFromSave(
@@ -282,28 +289,29 @@ namespace CustomLandParcel.Data
             uint savedVersion,
             string reason)
         {
-            _parcels.Clear();
-            _parcels.AddRange(parcels);
-            _version = math.max(savedVersion, _version) + 1;
-            _selection = new ParcelSelection(selectedParcelId, selectedVertexIndex);
+            _mParcels.Clear();
+            _mParcels.AddRange(parcels);
+            _mVersion = math.max(savedVersion, _mVersion) + 1;
+            _mSelection = new ParcelSelection(selectedParcelId, selectedVertexIndex);
             EnsureValidSelection(reason);
             EnsureDefaultParcel($"{reason} fallback");
-            _info($"{reason}: replaced store from save. {GetSummary()}.");
+            _mInfo($"{reason}: replaced store from save. {GetSummary()}.");
         }
 
         public void SetDefaults(string reason)
         {
-            _parcels.Clear();
-            _selection = ParcelSelection.Empty;
+            _mParcels.Clear();
+            _mSelection = ParcelSelection.Empty;
             EnsureDefaultParcel(reason);
-            _version++;
-            _info($"{reason}: defaults applied. {GetSummary()}.");
+            _mVersion++;
+            _mInfo($"{reason}: defaults applied. {GetSummary()}.");
         }
 
         public string GetSummary()
         {
-            var purchased = _parcels.Count(parcel => parcel.IsPurchased);
-            return $"parcels={_parcels.Count}, purchased={purchased}, selected={FormatGuid(_selection.ParcelId)}, vertex={_selection.VertexIndex}, version={_version}";
+            var purchased = _mParcels.Count(parcel => parcel.IsPurchased);
+            return
+                $"parcels={_mParcels.Count}, purchased={purchased}, selected={FormatGuid(_mSelection.ParcelId)}, vertex={_mSelection.VertexIndex}, version={_mVersion}";
         }
 
         public static string FormatGuid(Guid id)
@@ -313,37 +321,39 @@ namespace CustomLandParcel.Data
 
         private void EnsureDefaultParcel(string reason)
         {
-            if (_parcels.Count != 0)
+            if (_mParcels.Count != 0)
             {
                 return;
             }
 
-            var parcel = ParcelGeometry.CreateRectangle("Parcel 1", ParcelGeometry.DefaultCenter, ParcelGeometry.DefaultSize);
-            _parcels.Add(parcel);
-            _selection = new ParcelSelection(parcel.Id, 0);
-            _info($"{reason}: seeded default {parcel}.");
+            var parcel =
+                ParcelGeometry.CreateRectangle("Parcel 1", ParcelGeometry.DefaultCenter, ParcelGeometry.DefaultSize);
+            _mParcels.Add(parcel);
+            _mSelection = new ParcelSelection(parcel.Id, 0);
+            _mInfo($"{reason}: seeded default {parcel}.");
         }
 
         private void EnsureValidSelection(string reason)
         {
-            if (_parcels.Count == 0)
+            if (_mParcels.Count == 0)
             {
-                _selection = ParcelSelection.Empty;
+                _mSelection = ParcelSelection.Empty;
                 return;
             }
 
-            if (FindParcel(_selection.ParcelId) == null)
+            if (FindParcel(_mSelection.ParcelId) == null)
             {
-                _selection.ParcelId = _parcels[0].Id;
-                _warn($"{reason}: selected parcel was missing; selected first parcel {FormatGuid(_selection.ParcelId)}.");
+                _mSelection.ParcelId = _mParcels[0].Id;
+                _mWarn(
+                    $"{reason}: selected parcel was missing; selected first parcel {FormatGuid(_mSelection.ParcelId)}.");
             }
 
-            _selection.VertexIndex = ClampVertexIndex(SelectedParcel, _selection.VertexIndex);
+            _mSelection.VertexIndex = ClampVertexIndex(SelectedParcel, _mSelection.VertexIndex);
         }
 
         private LandParcel FindParcel(Guid id)
         {
-            return id == Guid.Empty ? null : _parcels.FirstOrDefault(parcel => parcel.Id == id);
+            return id == Guid.Empty ? null : _mParcels.FirstOrDefault(parcel => parcel.Id == id);
         }
 
         private static int ClampVertexIndex(LandParcel parcel, int index)
@@ -358,8 +368,8 @@ namespace CustomLandParcel.Data
 
         private void MarkChanged(string message)
         {
-            _version++;
-            _info($"ParcelStore changed: {message}; {GetSummary()}.");
+            _mVersion++;
+            _mInfo($"ParcelStore changed: {message}; {GetSummary()}.");
         }
     }
 }

@@ -18,28 +18,28 @@ namespace CustomLandParcel.Systems
         {
         }
 
-        private EntityQuery m_ObjectPreviewQuery;
-        private EntityQuery m_CurvePreviewQuery;
-        private ParcelStoreSystem m_ParcelStoreSystem;
-        private int m_LastInvalidCount = -1;
-        private int m_FramesSinceLog;
+        private EntityQuery _mObjectPreviewQuery;
+        private EntityQuery _mCurvePreviewQuery;
+        private ParcelStoreSystem _mParcelStoreSystem;
+        private int _mLastInvalidCount = -1;
+        private int _mFramesSinceLog;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
 
-            m_ObjectPreviewQuery = GetEntityQuery(
+            _mObjectPreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
                 ComponentType.ReadOnly<Transform>(),
                 ComponentType.Exclude<Deleted>());
 
-            m_CurvePreviewQuery = GetEntityQuery(
+            _mCurvePreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
                 ComponentType.ReadOnly<Curve>(),
                 ComponentType.Exclude<Deleted>());
 
-            Mod.log.Info($"ConstructionRestrictionSystem enabled. {m_ParcelStoreSystem.GetSummary()}.");
+            Mod.log.Info($"ConstructionRestrictionSystem enabled. {_mParcelStoreSystem.GetSummary()}.");
         }
 
         protected override void OnUpdate()
@@ -48,21 +48,21 @@ namespace CustomLandParcel.Systems
             invalidCount += RestrictObjectPreviews();
             invalidCount += RestrictCurvePreviews();
 
-            m_FramesSinceLog++;
-            if (invalidCount != m_LastInvalidCount && (invalidCount == 0 || m_FramesSinceLog >= 30))
+            _mFramesSinceLog++;
+            if (invalidCount != _mLastInvalidCount && (invalidCount == 0 || _mFramesSinceLog >= 30))
             {
-                m_LastInvalidCount = invalidCount;
-                m_FramesSinceLog = 0;
+                _mLastInvalidCount = invalidCount;
+                _mFramesSinceLog = 0;
                 Mod.log.Info(
-                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside purchased parcels. {m_ParcelStoreSystem.GetSummary()}.");
+                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside purchased parcels. {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 
         private int RestrictObjectPreviews()
         {
-            var entities = m_ObjectPreviewQuery.ToEntityArray(Allocator.Temp);
-            var temps = m_ObjectPreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
-            var transforms = m_ObjectPreviewQuery.ToComponentDataArray<Transform>(Allocator.Temp);
+            var entities = _mObjectPreviewQuery.ToEntityArray(Allocator.Temp);
+            var temps = _mObjectPreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
+            var transforms = _mObjectPreviewQuery.ToComponentDataArray<Transform>(Allocator.Temp);
 
             try
             {
@@ -78,7 +78,7 @@ namespace CustomLandParcel.Systems
                     }
 
                     var position = transforms[i].m_Position;
-                    var valid = m_ParcelStoreSystem.IsBuildable(new float2(position.x, position.z));
+                    var valid = _mParcelStoreSystem.IsBuildable(new float2(position.x, position.z));
                     SetRestrictionError(entity, !valid);
 
                     if (!valid)
@@ -99,9 +99,9 @@ namespace CustomLandParcel.Systems
 
         private int RestrictCurvePreviews()
         {
-            var entities = m_CurvePreviewQuery.ToEntityArray(Allocator.Temp);
-            var temps = m_CurvePreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
-            var curves = m_CurvePreviewQuery.ToComponentDataArray<Curve>(Allocator.Temp);
+            var entities = _mCurvePreviewQuery.ToEntityArray(Allocator.Temp);
+            var temps = _mCurvePreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
+            var curves = _mCurvePreviewQuery.ToComponentDataArray<Curve>(Allocator.Temp);
 
             try
             {
@@ -117,7 +117,7 @@ namespace CustomLandParcel.Systems
                     }
 
                     var curve = curves[i].m_Bezier;
-                    var valid = PlacementPreviewUtility.CurveInsideParcel(curve, m_ParcelStoreSystem);
+                    var valid = PlacementPreviewUtility.CurveInsideParcel(curve, _mParcelStoreSystem);
                     SetRestrictionError(entity, !valid);
 
                     if (!valid)
@@ -171,6 +171,5 @@ namespace CustomLandParcel.Systems
                 EntityManager.RemoveComponent<Error>(entity);
             }
         }
-
     }
 }

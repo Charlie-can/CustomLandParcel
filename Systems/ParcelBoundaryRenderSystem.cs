@@ -13,44 +13,38 @@ namespace CustomLandParcel.Systems
     /// </summary>
     public partial class ParcelBoundaryRenderSystem : GameSystemBase
     {
-        private OverlayRenderSystem _mOverlayRenderSystem;
-        private ParcelStoreSystem _mParcelStoreSystem;
-        private int _mFramesUntilLog;
+        private OverlayRenderSystem m_OverlayRenderSystem;
+        private ParcelStoreSystem m_ParcelStoreSystem;
+        private int m_FramesUntilLog;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            _mOverlayRenderSystem = World.GetOrCreateSystemManaged<OverlayRenderSystem>();
-            _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            m_OverlayRenderSystem = World.GetOrCreateSystemManaged<OverlayRenderSystem>();
+            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
             Mod.log.Info(
                 "ParcelBoundaryRenderSystem enabled. Drawing all parcel polygons and selected vertex handles through OverlayRenderSystem.");
         }
 
         protected override void OnUpdate()
         {
-            if (_mOverlayRenderSystem == null)
-            {
-                _mOverlayRenderSystem = World.GetOrCreateSystemManaged<OverlayRenderSystem>();
-            }
+            m_OverlayRenderSystem ??= World.GetOrCreateSystemManaged<OverlayRenderSystem>();
 
-            if (_mParcelStoreSystem == null)
-            {
-                _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
-            }
+            m_ParcelStoreSystem ??= World.GetOrCreateSystemManaged<ParcelStoreSystem>();
 
-            var buffer = _mOverlayRenderSystem.GetBuffer(out var dependencies);
+            var buffer = m_OverlayRenderSystem.GetBuffer(out var dependencies);
             dependencies.Complete();
 
-            DrawParcels(buffer, _mParcelStoreSystem);
-            _mOverlayRenderSystem.AddBufferWriter(default(JobHandle));
+            DrawParcels(buffer, m_ParcelStoreSystem);
+            m_OverlayRenderSystem.AddBufferWriter(default(JobHandle));
 
-            if (_mFramesUntilLog <= 0)
+            if (m_FramesUntilLog <= 0)
             {
-                Mod.log.Info($"Parcel overlay submitted this frame: {_mParcelStoreSystem.GetSummary()}.");
-                _mFramesUntilLog = 300;
+                Mod.log.Info($"Parcel overlay submitted this frame: {m_ParcelStoreSystem.GetSummary()}.");
+                m_FramesUntilLog = 300;
             }
 
-            _mFramesUntilLog--;
+            m_FramesUntilLog--;
         }
 
         private static void DrawParcels(OverlayRenderSystem.Buffer buffer, ParcelStoreSystem store)
@@ -61,9 +55,8 @@ namespace CustomLandParcel.Systems
             const float dashLength = 64f;
             const float gapLength = 48f;
 
-            for (var i = 0; i < store.Parcels.Count; i++)
+            foreach (var parcel in store.Parcels)
             {
-                var parcel = store.Parcels[i];
                 if (parcel.Points.Count < 2)
                 {
                     continue;

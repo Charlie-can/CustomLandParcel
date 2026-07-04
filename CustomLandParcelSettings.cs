@@ -14,10 +14,14 @@ namespace CustomLandParcel
         public const string GrowAction = "GrowParcel";
         public const string ShrinkAction = "ShrinkParcel";
 
+        private const bool DefaultEnableVanillaMapTileCompatibility = false;
+
         public CustomLandParcelSettings(IMod mod)
             : base(mod)
         {
         }
+
+        public bool EnableVanillaMapTileCompatibility { get; set; }
 
         [SettingsUIKeyboardBinding(BindingKeyboard.B, ToggleEditModeAction, alt: true, ctrl: true)]
         public ProxyBinding ToggleEditMode { get; set; }
@@ -42,6 +46,7 @@ namespace CustomLandParcel
 
         public override void SetDefaults()
         {
+            EnableVanillaMapTileCompatibility = DefaultEnableVanillaMapTileCompatibility;
         }
     }
 }

@@ -1,5 +1,4 @@
-using System;
-using Colossal.Serialization.Entities;
+﻿using System;
 using Colossal.UI.Binding;
 using CustomLandParcel.Geometry;
 using CustomLandParcel.UI;
@@ -17,9 +16,9 @@ namespace CustomLandParcel.Systems
     public partial class ParcelUISystem : UISystemBase
     {
         private const string Group = "customLandParcel";
-        private ParcelStoreSystem _parcelStoreSystem;
-        private RawValueBinding _parcelsBinding;
-        private uint _lastLoggedVersion;
+        private ParcelStoreSystem _mParcelStoreSystem;
+        private RawValueBinding _mParcelsBinding;
+        private uint _mLastLoggedVersion;
 
         public override GameMode gameMode => GameMode.Game;
 
@@ -27,25 +26,25 @@ namespace CustomLandParcel.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
-            _parcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
 
-            AddUpdateBinding(_parcelsBinding = new RawValueBinding(Group, "parcels", BindParcels));
+            AddUpdateBinding(_mParcelsBinding = new RawValueBinding(Group, "parcels", BindParcels));
             AddUpdateBinding(new GetterValueBinding<string>(
                 Group,
                 "selectedParcelId",
-                () => ParcelStoreSystem.FormatGuid(_parcelStoreSystem.SelectedParcelId)));
+                () => ParcelStoreSystem.FormatGuid(_mParcelStoreSystem.SelectedParcelId)));
             AddUpdateBinding(new GetterValueBinding<int>(
                 Group,
                 "selectedVertexIndex",
-                () => _parcelStoreSystem.SelectedVertexIndex));
+                () => _mParcelStoreSystem.SelectedVertexIndex));
             AddUpdateBinding(new GetterValueBinding<uint>(
                 Group,
                 "version",
-                () => _parcelStoreSystem.Version));
+                () => _mParcelStoreSystem.Version));
             AddUpdateBinding(new GetterValueBinding<string>(
                 Group,
                 "summary",
-                () => _parcelStoreSystem.GetSummary()));
+                () => _mParcelStoreSystem.GetSummary()));
 
             AddBinding(new TriggerBinding(Group, "addRectangle", AddRectangle));
             AddBinding(new TriggerBinding<string>(Group, "selectParcel", SelectParcel));
@@ -60,30 +59,30 @@ namespace CustomLandParcel.Systems
             AddBinding(new TriggerBinding(Group, "deleteSelectedVertex", DeleteSelectedVertex));
             AddBinding(new TriggerBinding(Group, "clearAndSeedDefault", ClearAndSeedDefault));
 
-            Mod.log.Info($"ParcelUISystem enabled. Binding group='{Group}', {_parcelStoreSystem.GetSummary()}.");
+            Mod.log.Info($"ParcelUISystem enabled. Binding group='{Group}', {_mParcelStoreSystem.GetSummary()}.");
         }
 
         [Preserve]
         protected override void OnUpdate()
         {
             base.OnUpdate();
-            if (_lastLoggedVersion != _parcelStoreSystem.Version)
+            if (_mLastLoggedVersion != _mParcelStoreSystem.Version)
             {
-                _lastLoggedVersion = _parcelStoreSystem.Version;
-                Mod.log.Info($"ParcelUISystem observed store change: {_parcelStoreSystem.GetSummary()}.");
+                _mLastLoggedVersion = _mParcelStoreSystem.Version;
+                Mod.log.Info($"ParcelUISystem observed store change: {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 
         private void BindParcels(IJsonWriter writer)
         {
-            ParcelUIWriter.WriteParcels(writer, _parcelStoreSystem.Store);
+            ParcelUIWriter.WriteParcels(writer, _mParcelStoreSystem.Store);
         }
 
         private void AddRectangle()
         {
-            var offset = _parcelStoreSystem.Parcels.Count * 1250f;
-            var parcel = _parcelStoreSystem.CreateRectangle(
-                $"Parcel {_parcelStoreSystem.Parcels.Count + 1}",
+            var offset = _mParcelStoreSystem.Parcels.Count * 1250f;
+            var parcel = _mParcelStoreSystem.CreateRectangle(
+                $"Parcel {_mParcelStoreSystem.Parcels.Count + 1}",
                 new float2(offset, 0f),
                 new float2(1000f, 1000f),
                 "ui addRectangle");
@@ -98,74 +97,74 @@ namespace CustomLandParcel.Systems
                 return;
             }
 
-            _parcelStoreSystem.SelectParcel(id, "ui selectParcel");
+            _mParcelStoreSystem.SelectParcel(id, "ui selectParcel");
             LogTrigger($"selectParcel id={idText}");
         }
 
         private void SelectVertex(int index)
         {
-            _parcelStoreSystem.SelectVertex(index, "ui selectVertex");
+            _mParcelStoreSystem.SelectVertex(index, "ui selectVertex");
             LogTrigger($"selectVertex index={index}");
         }
 
         private void SelectNextParcel(int direction)
         {
-            _parcelStoreSystem.SelectNextParcel(direction == 0 ? 1 : math.sign(direction), "ui selectNextParcel");
+            _mParcelStoreSystem.SelectNextParcel(direction == 0 ? 1 : math.sign(direction), "ui selectNextParcel");
             LogTrigger($"selectNextParcel direction={direction}");
         }
 
         private void RenameSelectedParcel(string name)
         {
-            _parcelStoreSystem.RenameSelectedParcel(name, "ui renameSelectedParcel");
+            _mParcelStoreSystem.RenameSelectedParcel(name, "ui renameSelectedParcel");
             LogTrigger($"renameSelectedParcel name='{name}'");
         }
 
         private void DeleteSelectedParcel()
         {
-            _parcelStoreSystem.DeleteSelectedParcel("ui deleteSelectedParcel");
+            _mParcelStoreSystem.DeleteSelectedParcel("ui deleteSelectedParcel");
             LogTrigger("deleteSelectedParcel");
         }
 
         private void PurchaseSelectedParcel()
         {
-            _parcelStoreSystem.PurchaseSelectedParcel("ui purchaseSelectedParcel");
+            _mParcelStoreSystem.PurchaseSelectedParcel("ui purchaseSelectedParcel");
             LogTrigger("purchaseSelectedParcel");
         }
 
         private void MoveSelectedParcel(float2 delta)
         {
-            _parcelStoreSystem.MoveSelectedParcel(delta, "ui moveSelectedParcel");
+            _mParcelStoreSystem.MoveSelectedParcel(delta, "ui moveSelectedParcel");
             LogTrigger($"moveSelectedParcel delta={ParcelGeometry.Format(delta)}");
         }
 
         private void MoveSelectedVertex(float2 delta)
         {
-            _parcelStoreSystem.MoveSelectedVertex(delta, "ui moveSelectedVertex");
+            _mParcelStoreSystem.MoveSelectedVertex(delta, "ui moveSelectedVertex");
             LogTrigger($"moveSelectedVertex delta={ParcelGeometry.Format(delta)}");
         }
 
         private void InsertVertexAfterSelected()
         {
-            _parcelStoreSystem.InsertVertexAfterSelected("ui insertVertexAfterSelected");
+            _mParcelStoreSystem.InsertVertexAfterSelected("ui insertVertexAfterSelected");
             LogTrigger("insertVertexAfterSelected");
         }
 
         private void DeleteSelectedVertex()
         {
-            _parcelStoreSystem.DeleteSelectedVertex("ui deleteSelectedVertex");
+            _mParcelStoreSystem.DeleteSelectedVertex("ui deleteSelectedVertex");
             LogTrigger("deleteSelectedVertex");
         }
 
         private void ClearAndSeedDefault()
         {
-            _parcelStoreSystem.ClearAllAndSeedDefault("ui clearAndSeedDefault");
+            _mParcelStoreSystem.ClearAllAndSeedDefault("ui clearAndSeedDefault");
             LogTrigger("clearAndSeedDefault");
         }
 
         private void LogTrigger(string message)
         {
-            _parcelsBinding.Update();
-            Mod.log.Info($"Parcel UI trigger handled: {message}; {_parcelStoreSystem.GetSummary()}.");
+            _mParcelsBinding.Update();
+            Mod.log.Info($"Parcel UI trigger handled: {message}; {_mParcelStoreSystem.GetSummary()}.");
         }
 
         private static bool TryParseGuid(string text, out Guid id)
