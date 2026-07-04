@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { bindValue, trigger, useValue } from "cs2/api";
 import { ModRegistrar } from "cs2/modding";
+import { Button } from "cs2/ui";
 
 type Point = {
   x: number;
@@ -114,12 +115,12 @@ function ParcelRow({ parcel }: { parcel: Parcel }): JSX.Element {
   };
 
   return (
-    <button type="button" style={style} onClick={() => trigger(GROUP, "selectParcel", parcel.id)} title="Select parcel">
+    <Button style={style} onSelect={() => trigger(GROUP, "selectParcel", parcel.id)} tooltipLabel="Select parcel">
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parcel.name || "Parcel"}</span>
       <span style={{ color: isPurchased ? "#8fe0a2" : "#f0c66d" }}>{parcel.state}</span>
       <span style={{ color: "rgba(245, 248, 252, 0.72)" }}>{formatArea(parcel.area)}</span>
       <span style={{ color: "rgba(245, 248, 252, 0.72)", textAlign: "right" }}>${formatMoney(parcel.price)}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -131,19 +132,18 @@ function VertexList({ selected }: { selected: SelectedParcel | null }): JSX.Elem
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6rem" }}>
       {selected.points.map((point, index) => (
-        <button
+        <Button
           key={`${selected.id}-${index}`}
-          type="button"
           style={{
             ...buttonBase,
             background: index === selected.selectedVertexIndex ? "rgba(37, 109, 151, 0.98)" : buttonBase.background,
             textAlign: "left",
           }}
-          onClick={() => trigger(GROUP, "selectVertex", index)}
-          title="Select vertex"
+          onSelect={() => trigger(GROUP, "selectVertex", index)}
+          tooltipLabel="Select vertex"
         >
           V{index + 1}: {formatPoint(point)}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -169,7 +169,7 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
       style={{
         position: "absolute",
         top: "96rem",
-        right: "24rem",
+        left: "24rem",
         width: "420rem",
         maxHeight: "760rem",
         zIndex: 10000,
@@ -187,23 +187,22 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
     >
       <div style={{ ...rowStyle, justifyContent: "space-between" }}>
         <div style={{ fontSize: "18rem", fontWeight: 700 }}>Custom Land Parcel</div>
-        <button type="button" style={buttonBase} onClick={onClose} title="Close panel">
+        <Button style={buttonBase} onSelect={onClose} tooltipLabel="Close panel">
           x
-        </button>
+        </Button>
       </div>
 
       <div style={rowStyle}>
-        <button
-          type="button"
+        <Button
           style={editToolActive ? primaryButton : buttonBase}
-          onClick={() => trigger(GROUP, "setParcelEditToolActive", !editToolActive)}
-          title="Toggle map parcel edit tool"
+          onSelect={() => trigger(GROUP, "setParcelEditToolActive", !editToolActive)}
+          tooltipLabel="Toggle map parcel edit tool"
         >
           {editToolActive ? "Map Tool On" : "Map Tool Off"}
-        </button>
-        <button type="button" style={buttonBase} onClick={() => trigger(GROUP, "addRectangle")} title="Add a rectangular parcel">
+        </Button>
+        <Button style={buttonBase} onSelect={() => trigger(GROUP, "addRectangle")} tooltipLabel="Add a rectangular parcel">
           Add Rectangle
-        </button>
+        </Button>
       </div>
 
       <div style={{ color: "rgba(245, 248, 252, 0.68)", lineHeight: "20rem" }}>{summary}</div>
@@ -227,27 +226,26 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
             onChange={(event) => selected && trigger(GROUP, "renameSelectedParcel", event.currentTarget.value)}
             title="Rename selected parcel"
           />
-          <button
-            type="button"
+          <Button
             style={primaryButton}
             disabled={!selected || selectedPurchased}
-            onClick={() => trigger(GROUP, "purchaseSelectedParcel")}
-            title="Purchase selected parcel"
+            onSelect={() => trigger(GROUP, "purchaseSelectedParcel")}
+            tooltipLabel="Purchase selected parcel"
           >
             Buy ${selected ? formatMoney(selected.price) : 0}
-          </button>
+          </Button>
         </div>
 
         <div style={rowStyle}>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => trigger(GROUP, "selectNextParcel", -1)}>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => trigger(GROUP, "selectNextParcel", -1)}>
             Prev
-          </button>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => trigger(GROUP, "selectNextParcel", 1)}>
+          </Button>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => trigger(GROUP, "selectNextParcel", 1)}>
             Next
-          </button>
-          <button type="button" style={dangerButton} disabled={!selected} onClick={() => trigger(GROUP, "deleteSelectedParcel")}>
+          </Button>
+          <Button style={dangerButton} disabled={!selected} onSelect={() => trigger(GROUP, "deleteSelectedParcel")}>
             Delete
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -268,19 +266,19 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6rem" }}>
           <span />
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedParcel(0, step)}>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(0, step)}>
             Up
-          </button>
+          </Button>
           <span />
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedParcel(-step, 0)}>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(-step, 0)}>
             Left
-          </button>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedParcel(0, -step)}>
+          </Button>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(0, -step)}>
             Down
-          </button>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedParcel(step, 0)}>
+          </Button>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(step, 0)}>
             Right
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -288,26 +286,26 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         <div style={{ fontWeight: 700 }}>Vertices</div>
         <VertexList selected={selected} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "6rem" }}>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedVertex(0, step)}>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(0, step)}>
             V Up
-          </button>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedVertex(0, -step)}>
+          </Button>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(0, -step)}>
             V Down
-          </button>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedVertex(-step, 0)}>
+          </Button>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(-step, 0)}>
             V Left
-          </button>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => moveSelectedVertex(step, 0)}>
+          </Button>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(step, 0)}>
             V Right
-          </button>
+          </Button>
         </div>
         <div style={rowStyle}>
-          <button type="button" style={buttonBase} disabled={!selected} onClick={() => trigger(GROUP, "insertVertexAfterSelected")}>
+          <Button style={buttonBase} disabled={!selected} onSelect={() => trigger(GROUP, "insertVertexAfterSelected")}>
             Insert Vertex
-          </button>
-          <button type="button" style={dangerButton} disabled={!selected} onClick={() => trigger(GROUP, "deleteSelectedVertex")}>
+          </Button>
+          <Button style={dangerButton} disabled={!selected} onSelect={() => trigger(GROUP, "deleteSelectedVertex")}>
             Delete Vertex
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -317,22 +315,19 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
 function CustomLandParcelRoot(): JSX.Element {
   const [open, setOpen] = useState(false);
 
-  if (!open) {
-    return (
-      <div style={{ position: "absolute", top: "96rem", right: "24rem", zIndex: 9999 }}>
-        <button type="button" style={primaryButton} onClick={() => setOpen(true)} title="Open Custom Land Parcel panel">
-          Land Parcels
-        </button>
-      </div>
-    );
-  }
-
-  return <ParcelPanel onClose={() => setOpen(false)} />;
+  return (
+    <>
+      <Button style={primaryButton} selected={open} onSelect={() => setOpen(!open)} tooltipLabel="Open Custom Land Parcel panel">
+        Land Parcels
+      </Button>
+      {open && <ParcelPanel onClose={() => setOpen(false)} />}
+    </>
+  );
 }
 
 const register: ModRegistrar = (moduleRegistry) => {
-  console.log("[CustomLandParcelUI] registering game panel.");
-  moduleRegistry.append("Game", CustomLandParcelRoot);
+  console.log("[CustomLandParcelUI] registering top-left game panel launcher.");
+  moduleRegistry.append("GameTopLeft", CustomLandParcelRoot);
 };
 
 export default register;
