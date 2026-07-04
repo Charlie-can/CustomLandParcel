@@ -74,6 +74,12 @@ namespace CustomLandParcel.Systems
                 _mMaterial = new Material(shader);
                 SetMaterialColor(_mMaterial, new Color(0f, 0.95f, 1f, 0.95f));
                 _mLineRenderer.material = _mMaterial;
+                Mod.log.Info($"Parcel boundary renderer material created with shader '{shader.name}'.");
+            }
+            else
+            {
+                Mod.log.Warn(
+                    "Parcel boundary renderer could not find Sprites/Default or Unlit/Color shader; LineRenderer will use Unity fallback material.");
             }
 
             var min = ConstructionRestrictionSystem.ParcelMin;
@@ -83,6 +89,9 @@ namespace CustomLandParcel.Systems
             _mLineRenderer.SetPosition(1, ToVector3(new float3(max.x, y, min.y)));
             _mLineRenderer.SetPosition(2, ToVector3(new float3(max.x, y, max.y)));
             _mLineRenderer.SetPosition(3, ToVector3(new float3(min.x, y, max.y)));
+
+            Mod.log.Info(
+                $"Parcel boundary renderer points: ({min.x:F1}, {y:F1}, {min.y:F1}) -> ({max.x:F1}, {y:F1}, {min.y:F1}) -> ({max.x:F1}, {y:F1}, {max.y:F1}) -> ({min.x:F1}, {y:F1}, {max.y:F1}); width={_mLineRenderer.widthMultiplier:F1}.");
         }
 
         private static Vector3 ToVector3(float3 value)

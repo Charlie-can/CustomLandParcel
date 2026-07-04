@@ -15,8 +15,10 @@ namespace CustomLandParcel
         {
             log.Info(nameof(OnLoad));
             updateSystem.UpdateAt<ParcelBoundaryBlockerSystem>(SystemUpdatePhase.PostTool);
+            updateSystem.UpdateAt<ParcelPlacementDiagnosticsSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
-            log.Info("Registered ParcelBoundaryBlockerSystem at PostTool and ParcelBoundaryRenderSystem at Rendering.");
+            log.Info(
+                "Registered ParcelBoundaryBlockerSystem and ParcelPlacementDiagnosticsSystem at PostTool, ParcelBoundaryRenderSystem at Rendering.");
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {
