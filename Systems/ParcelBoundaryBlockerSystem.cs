@@ -3,6 +3,7 @@ using Game.Areas;
 using Game.Common;
 using Game.Prefabs;
 using Game.Tools;
+using Colossal.Mathematics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -130,8 +131,9 @@ namespace CustomLandParcel.Systems
             var entity = EntityManager.CreateEntity();
             EntityManager.AddComponentData(entity, new PrefabRef(prefab));
             EntityManager.AddComponentData(entity, new Area(AreaFlags.Complete));
-            EntityManager.AddComponentData(entity, default(MapTile));
             EntityManager.AddBuffer<Node>(entity);
+            EntityManager.AddBuffer<Triangle>(entity);
+            EntityManager.AddComponentData(entity, CreateGeometry(min, max));
 
             if (!EntityManager.HasComponent<Native>(entity))
             {
@@ -147,6 +149,22 @@ namespace CustomLandParcel.Systems
             nodes[1] = new Node(new float3(min.x, 0f, max.y), float.MinValue);
             nodes[2] = new Node(new float3(max.x, 0f, max.y), float.MinValue);
             nodes[3] = new Node(new float3(max.x, 0f, min.y), float.MinValue);
+
+            var triangles = EntityManager.GetBuffer<Triangle>(entity);
+            triangles.ResizeUninitialized(2);
+            triangles[0] = new Triangle(0, 1, 2);
+            triangles[1] = new Triangle(0, 2, 3);
+        }
+
+        private static Geometry CreateGeometry(float2 min, float2 max)
+        {
+            var bounds = new Bounds3(new float3(min.x, 0f, min.y), new float3(max.x, 0f, max.y));
+            return new Geometry
+            {
+                m_Bounds = bounds,
+                m_CenterPosition = new float3((min.x + max.x) * 0.5f, 0f, (min.y + max.y) * 0.5f),
+                m_SurfaceArea = math.max(0f, max.x - min.x) * math.max(0f, max.y - min.y)
+            };
         }
     }
 }

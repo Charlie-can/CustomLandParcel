@@ -8,7 +8,8 @@ namespace CustomLandParcel
 {
     public class Mod : IMod
     {
-        public static ILog log = LogManager.GetLogger($"{nameof(CustomLandParcel)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
+        public static ILog log = LogManager.GetLogger($"{nameof(CustomLandParcel)}.{nameof(Mod)}")
+            .SetShowsErrorsInUI(false);
 
         public void OnLoad(UpdateSystem updateSystem)
         {

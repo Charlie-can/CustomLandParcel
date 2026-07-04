@@ -55,7 +55,8 @@ namespace CustomLandParcel.Systems
             {
                 m_LastInvalidCount = invalidCount;
                 m_FramesSinceLog = 0;
-                Mod.log.Info($"Parcel validation: {invalidCount} active construction preview entity/entities outside MVP parcel.");
+                Mod.log.Info(
+                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside MVP parcel.");
             }
         }
 
@@ -145,7 +146,8 @@ namespace CustomLandParcel.Systems
                 return false;
             }
 
-            if ((temp.m_Flags & (TempFlags.Hidden | TempFlags.Delete | TempFlags.Cancel | TempFlags.Select | TempFlags.Optional)) != 0)
+            if ((temp.m_Flags & (TempFlags.Hidden | TempFlags.Delete | TempFlags.Cancel | TempFlags.Select |
+                                 TempFlags.Optional)) != 0)
             {
                 return false;
             }
