@@ -25,17 +25,16 @@ namespace CustomLandParcel.Compatibility
         {
         }
 
-        public struct VanillaMapTileHiddenByParcel : IComponentData
+        public struct VanillaMapTileUnlockedByParcel : IComponentData
         {
-            public bool m_AddedHidden;
         }
 
         private EntityQuery _mMapTilePrefabQuery;
         private EntityQuery _mMapTileQuery;
-        private EntityQuery _mLockedMapTileQuery;
+        private EntityQuery _mVanillaMapTileQuery;
         private EntityQuery _mBlockerQuery;
         private EntityQuery _mBlockerReadyQuery;
-        private EntityQuery _mHiddenByParcelQuery;
+        private EntityQuery _mUnlockedByParcelQuery;
         private ParcelStoreSystem _mParcelStoreSystem;
         private bool _mCreated;
         private uint _mAppliedParcelVersion;
@@ -59,15 +58,14 @@ namespace CustomLandParcel.Compatibility
                 ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<Temp>(),
                 ComponentType.Exclude<VanillaMapTileBlocker>());
-            _mLockedMapTileQuery = GetEntityQuery(
+            _mVanillaMapTileQuery = GetEntityQuery(
                 ComponentType.ReadOnly<MapTile>(),
                 ComponentType.ReadOnly<Node>(),
-                ComponentType.ReadOnly<Native>(),
                 ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<Temp>(),
                 ComponentType.Exclude<VanillaMapTileBlocker>());
             _mBlockerQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileBlocker>());
-            _mHiddenByParcelQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileHiddenByParcel>());
+            _mUnlockedByParcelQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileUnlockedByParcel>());
             _mBlockerReadyQuery = GetEntityQuery(
                 ComponentType.ReadOnly<VanillaMapTileBlocker>(),
                 ComponentType.ReadOnly<Area>(),
@@ -81,7 +79,7 @@ namespace CustomLandParcel.Compatibility
 
         protected override void OnDestroy()
         {
-            RestoreHiddenMapTiles("system destroyed");
+            RestoreUnlockedMapTiles("system destroyed");
             base.OnDestroy();
         }
 
@@ -142,7 +140,7 @@ namespace CustomLandParcel.Compatibility
                 var prefab = prefabs[0];
                 LogPrefabDiagnostics(prefab, prefabs.Length);
                 UpsertBlockers(prefab, worldMin, worldMax, parcelMin, parcelMax);
-                RefreshHiddenMapTiles(parcelMin, parcelMax);
+                RefreshUnlockedMapTiles(parcelMin, parcelMax);
                 _mCreated = true;
                 _mAppliedParcelVersion = currentVersion;
                 _mPendingParcelVersion = 0;
@@ -164,7 +162,7 @@ namespace CustomLandParcel.Compatibility
 
         private void DisableCompatibilityLayer()
         {
-            if (_mCreated || !_mBlockerQuery.IsEmptyIgnoreFilter || !_mHiddenByParcelQuery.IsEmptyIgnoreFilter)
+            if (_mCreated || !_mBlockerQuery.IsEmptyIgnoreFilter || !_mUnlockedByParcelQuery.IsEmptyIgnoreFilter)
             {
                 using var blockers = _mBlockerQuery.ToEntityArray(Allocator.Temp);
                 for (var i = 0; i < blockers.Length; i++)
@@ -172,7 +170,7 @@ namespace CustomLandParcel.Compatibility
                     EntityManager.DestroyEntity(blockers[i]);
                 }
 
-                RestoreHiddenMapTiles("compatibility disabled");
+                RestoreUnlockedMapTiles("compatibility disabled");
                 Mod.log.Info(
                     $"VanillaMapTileBlockerSystem compatibility layer disabled; destroyed {blockers.Length} blocker entity/entities.");
             }
@@ -388,12 +386,13 @@ namespace CustomLandParcel.Compatibility
             }
         }
 
-        private void RefreshHiddenMapTiles(float2 parcelMin, float2 parcelMax)
+        private void RefreshUnlockedMapTiles(float2 parcelMin, float2 parcelMax)
         {
-            var restored = RestoreStaleHiddenMapTiles(parcelMin, parcelMax);
-            var hidden = 0;
-            var repaired = 0;
-            using var entities = _mLockedMapTileQuery.ToEntityArray(Allocator.Temp);
+            var restored = RestoreStaleUnlockedMapTiles(parcelMin, parcelMax);
+            var unlocked = 0;
+            var alreadyUnlockedByParcel = 0;
+            var alreadyVanillaOwned = 0;
+            using var entities = _mVanillaMapTileQuery.ToEntityArray(Allocator.Temp);
             for (var i = 0; i < entities.Length; i++)
             {
                 var entity = entities[i];
@@ -402,52 +401,44 @@ namespace CustomLandParcel.Compatibility
                     continue;
                 }
 
-                if (EntityManager.HasComponent<VanillaMapTileHiddenByParcel>(entity))
+                if (EntityManager.HasComponent<VanillaMapTileUnlockedByParcel>(entity))
                 {
-                    var marker = EntityManager.GetComponentData<VanillaMapTileHiddenByParcel>(entity);
-                    if (marker.m_AddedHidden && !EntityManager.HasComponent<Hidden>(entity))
-                    {
-                        EntityManager.AddComponentData(entity, default(Hidden));
-                        repaired++;
-                    }
-
+                    alreadyUnlockedByParcel++;
                     continue;
                 }
 
-                var alreadyHidden = EntityManager.HasComponent<Hidden>(entity);
-                EntityManager.AddComponentData(entity, new VanillaMapTileHiddenByParcel
+                if (!EntityManager.HasComponent<Native>(entity))
                 {
-                    m_AddedHidden = !alreadyHidden
-                });
-
-                if (!alreadyHidden)
-                {
-                    EntityManager.AddComponentData(entity, default(Hidden));
+                    alreadyVanillaOwned++;
+                    continue;
                 }
 
-                hidden++;
+                EntityManager.RemoveComponent<Native>(entity);
+                EntityManager.AddComponentData(entity, default(VanillaMapTileUnlockedByParcel));
+                MarkUpdated(entity);
+                unlocked++;
             }
 
-            if (hidden > 0 || repaired > 0 || restored > 0)
+            if (unlocked > 0 || restored > 0)
             {
                 Mod.log.Info(
-                    $"Parcel map tile mask refreshed: hidden={hidden}, repaired={repaired}, restored={restored}, lockedTileCandidates={entities.Length}, activeParcelBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, {_mParcelStoreSystem.GetSummary()}.");
+                    $"Parcel map tile unlock mask refreshed: unlocked={unlocked}, restored={restored}, alreadyUnlockedByParcel={alreadyUnlockedByParcel}, alreadyVanillaOwned={alreadyVanillaOwned}, mapTileCandidates={entities.Length}, activeParcelBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 
-        private int RestoreStaleHiddenMapTiles(float2 parcelMin, float2 parcelMax)
+        private int RestoreStaleUnlockedMapTiles(float2 parcelMin, float2 parcelMax)
         {
             var restored = 0;
-            using var marked = _mHiddenByParcelQuery.ToEntityArray(Allocator.Temp);
+            using var marked = _mUnlockedByParcelQuery.ToEntityArray(Allocator.Temp);
             for (var i = 0; i < marked.Length; i++)
             {
                 var entity = marked[i];
-                var shouldStayHidden = EntityManager.Exists(entity)
-                                       && EntityManager.HasComponent<MapTile>(entity)
-                                       && EntityManager.HasComponent<Native>(entity)
-                                       && !EntityManager.HasComponent<VanillaMapTileBlocker>(entity)
-                                       && TileOverlapsPurchasedParcel(entity, parcelMin, parcelMax);
-                if (!shouldStayHidden && RestoreHiddenMapTile(entity))
+                var shouldStayUnlocked = EntityManager.Exists(entity)
+                                         && EntityManager.HasComponent<MapTile>(entity)
+                                         && !EntityManager.HasComponent<Native>(entity)
+                                         && !EntityManager.HasComponent<VanillaMapTileBlocker>(entity)
+                                         && TileOverlapsPurchasedParcel(entity, parcelMin, parcelMax);
+                if (!shouldStayUnlocked && RestoreUnlockedMapTile(entity))
                 {
                     restored++;
                 }
@@ -456,13 +447,13 @@ namespace CustomLandParcel.Compatibility
             return restored;
         }
 
-        private void RestoreHiddenMapTiles(string reason)
+        private void RestoreUnlockedMapTiles(string reason)
         {
-            using var marked = _mHiddenByParcelQuery.ToEntityArray(Allocator.Temp);
+            using var marked = _mUnlockedByParcelQuery.ToEntityArray(Allocator.Temp);
             var restored = 0;
             for (var i = 0; i < marked.Length; i++)
             {
-                if (RestoreHiddenMapTile(marked[i]))
+                if (RestoreUnlockedMapTile(marked[i]))
                 {
                     restored++;
                 }
@@ -470,25 +461,33 @@ namespace CustomLandParcel.Compatibility
 
             if (restored > 0)
             {
-                Mod.log.Info($"Parcel map tile mask restored {restored} vanilla map tile(s) ({reason}).");
+                Mod.log.Info($"Parcel map tile unlock mask restored {restored} vanilla map tile(s) ({reason}).");
             }
         }
 
-        private bool RestoreHiddenMapTile(Entity entity)
+        private bool RestoreUnlockedMapTile(Entity entity)
         {
-            if (!EntityManager.Exists(entity) || !EntityManager.HasComponent<VanillaMapTileHiddenByParcel>(entity))
+            if (!EntityManager.Exists(entity) || !EntityManager.HasComponent<VanillaMapTileUnlockedByParcel>(entity))
             {
                 return false;
             }
 
-            var marker = EntityManager.GetComponentData<VanillaMapTileHiddenByParcel>(entity);
-            EntityManager.RemoveComponent<VanillaMapTileHiddenByParcel>(entity);
-            if (marker.m_AddedHidden && EntityManager.HasComponent<Hidden>(entity))
+            EntityManager.RemoveComponent<VanillaMapTileUnlockedByParcel>(entity);
+            if (!EntityManager.HasComponent<Native>(entity))
             {
-                EntityManager.RemoveComponent<Hidden>(entity);
+                EntityManager.AddComponentData(entity, default(Native));
             }
 
+            MarkUpdated(entity);
             return true;
+        }
+
+        private void MarkUpdated(Entity entity)
+        {
+            if (!EntityManager.HasComponent<Updated>(entity))
+            {
+                EntityManager.AddComponentData(entity, default(Updated));
+            }
         }
 
         private bool TileOverlapsPurchasedParcel(Entity entity, float2 parcelMin, float2 parcelMax)
