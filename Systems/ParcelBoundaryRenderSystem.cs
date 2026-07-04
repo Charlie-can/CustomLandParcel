@@ -1,177 +1,113 @@
-﻿using Game;
-using System.Collections.Generic;
+﻿using Colossal.Mathematics;
+using Game;
+using Game.Rendering;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// MVP parcel boundary renderer. Uses a simple LineRenderer so the custom parcel is visible immediately.
+    /// Draws the MVP parcel through the game's overlay renderer so it is visible in the normal CS2 render pipeline.
     /// </summary>
     public partial class ParcelBoundaryRenderSystem : GameSystemBase
     {
-        private static readonly int kBaseColor = Shader.PropertyToID("_BaseColor");
-        private static readonly int kColor = Shader.PropertyToID("_Color");
-
-        private GameObject _mLineObject;
-        private LineRenderer _mLineRenderer;
-        private Material _mMaterial;
-        private readonly List<LineRenderer> _mAreaMarkerRenderers = new List<LineRenderer>();
+        private OverlayRenderSystem _mOverlayRenderSystem;
+        private int _mFramesUntilLog;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            CreateLineRenderer();
-            Mod.log.Info("ParcelBoundaryRenderSystem enabled. Drawing MVP parcel boundary with LineRenderer.");
-        }
-
-        protected override void OnDestroy()
-        {
-            if (_mLineObject != null)
-            {
-                Object.Destroy(_mLineObject);
-                _mLineObject = null;
-            }
-
-            if (_mMaterial != null)
-            {
-                Object.Destroy(_mMaterial);
-                _mMaterial = null;
-            }
-
-            _mAreaMarkerRenderers.Clear();
-
-            base.OnDestroy();
+            _mOverlayRenderSystem = World.GetOrCreateSystemManaged<OverlayRenderSystem>();
+            Mod.log.Info(
+                "ParcelBoundaryRenderSystem enabled. Drawing MVP parcel buildable area through OverlayRenderSystem.");
         }
 
         protected override void OnUpdate()
         {
-            if (_mLineRenderer == null)
+            if (_mOverlayRenderSystem == null)
             {
-                CreateLineRenderer();
-            }
-        }
-
-        private void CreateLineRenderer()
-        {
-            if (_mLineObject != null)
-            {
-                return;
+                _mOverlayRenderSystem = World.GetOrCreateSystemManaged<OverlayRenderSystem>();
             }
 
-            _mLineObject = new GameObject("Custom Land Parcel MVP Boundary");
-            Object.DontDestroyOnLoad(_mLineObject);
-
-            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color");
-            if (shader != null)
-            {
-                _mMaterial = new Material(shader);
-                SetMaterialColor(_mMaterial, new Color(0.05f, 1f, 0.35f, 0.95f));
-                Mod.log.Info($"Parcel boundary renderer material created with shader '{shader.name}'.");
-            }
-            else
-            {
-                Mod.log.Warn(
-                    "Parcel boundary renderer could not find Sprites/Default or Unlit/Color shader; LineRenderer will use Unity fallback material.");
-            }
+            var buffer = _mOverlayRenderSystem.GetBuffer(out var dependencies);
+            dependencies.Complete();
 
             var min = ConstructionRestrictionSystem.ParcelMin;
             var max = ConstructionRestrictionSystem.ParcelMax;
-            const float y = 80f;
-            var boundaryColor = new Color(0.05f, 1f, 0.35f, 0.98f);
-            var markerColor = new Color(0.05f, 1f, 0.35f, 0.42f);
+            DrawBuildableArea(buffer, min, max);
+            _mOverlayRenderSystem.AddBufferWriter(default(JobHandle));
 
-            _mLineRenderer = CreateRenderer("Buildable Area Outer Boundary", true, 4, 24f, boundaryColor);
-            _mLineRenderer.SetPosition(0, ToVector3(new float3(min.x, y, min.y)));
-            _mLineRenderer.SetPosition(1, ToVector3(new float3(max.x, y, min.y)));
-            _mLineRenderer.SetPosition(2, ToVector3(new float3(max.x, y, max.y)));
-            _mLineRenderer.SetPosition(3, ToVector3(new float3(min.x, y, max.y)));
+            if (_mFramesUntilLog <= 0)
+            {
+                Mod.log.Info(
+                    $"Parcel overlay marker submitted this frame: parcel={FormatFloat2(min)}..{FormatFloat2(max)}, outer dashed boundary + interior grid/diagonals.");
+                _mFramesUntilLog = 300;
+            }
 
-            CreateBuildableAreaMarkers(min, max, y + 2f, markerColor);
-
-            Mod.log.Info(
-                $"Parcel buildable area marker created: parcel={FormatFloat2(min)}..{FormatFloat2(max)}, boundaryWidth={_mLineRenderer.widthMultiplier:F1}, interiorMarkerLines={_mAreaMarkerRenderers.Count}.");
+            _mFramesUntilLog--;
         }
 
-        private void CreateBuildableAreaMarkers(float2 min, float2 max, float y, Color markerColor)
+        private static void DrawBuildableArea(OverlayRenderSystem.Buffer buffer, float2 min, float2 max)
         {
+            var outlineColor = new Color(0.05f, 1f, 0.28f, 1f);
+            var fillColor = new Color(0.05f, 1f, 0.28f, 0.85f);
+            var gridColor = new Color(0.05f, 1f, 0.28f, 0.45f);
+            const OverlayRenderSystem.StyleFlags style = OverlayRenderSystem.StyleFlags.Projected |
+                                                           OverlayRenderSystem.StyleFlags.DepthFadeBelow;
+
+            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(min.x, min.y), new float2(max.x, min.y), 28f, 72f, 28f);
+            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(max.x, min.y), new float2(max.x, max.y), 28f, 72f, 28f);
+            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(max.x, max.y), new float2(min.x, max.y), 28f, 72f, 28f);
+            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(min.x, max.y), new float2(min.x, min.y), 28f, 72f, 28f);
+
             const int divisions = 4;
             for (var i = 1; i < divisions; i++)
             {
                 var t = i / (float)divisions;
                 var x = math.lerp(min.x, max.x, t);
                 var z = math.lerp(min.y, max.y, t);
-                CreateMarkerSegment(
-                    $"Buildable Area Vertical Marker {i}",
-                    new float3(x, y, min.y),
-                    new float3(x, y, max.y),
-                    markerColor);
-                CreateMarkerSegment(
-                    $"Buildable Area Horizontal Marker {i}",
-                    new float3(min.x, y, z),
-                    new float3(max.x, y, z),
-                    markerColor);
+                DrawSegment(buffer, gridColor, style, new float2(x, min.y), new float2(x, max.y), 10f);
+                DrawSegment(buffer, gridColor, style, new float2(min.x, z), new float2(max.x, z), 10f);
             }
 
-            CreateMarkerSegment(
-                "Buildable Area Diagonal Marker A",
-                new float3(min.x, y, min.y),
-                new float3(max.x, y, max.y),
-                markerColor);
-            CreateMarkerSegment(
-                "Buildable Area Diagonal Marker B",
-                new float3(min.x, y, max.y),
-                new float3(max.x, y, min.y),
-                markerColor);
+            DrawSegment(buffer, gridColor, style, min, max, 10f);
+            DrawSegment(buffer, gridColor, style, new float2(min.x, max.y), new float2(max.x, min.y), 10f);
         }
 
-        private void CreateMarkerSegment(string name, float3 start, float3 end, Color color)
+        private static void DrawSegment(
+            OverlayRenderSystem.Buffer buffer,
+            Color color,
+            OverlayRenderSystem.StyleFlags style,
+            float2 start,
+            float2 end,
+            float width)
         {
-            var renderer = CreateRenderer(name, false, 2, 8f, color);
-            renderer.SetPosition(0, ToVector3(start));
-            renderer.SetPosition(1, ToVector3(end));
-            _mAreaMarkerRenderers.Add(renderer);
+            buffer.DrawLine(color, color, 0f, style, CreateLine(start, end), width, new float2(0.25f, 0.25f));
         }
 
-        private LineRenderer CreateRenderer(string name, bool loop, int positionCount, float width, Color color)
+        private static void DrawDashedSegment(
+            OverlayRenderSystem.Buffer buffer,
+            Color outlineColor,
+            Color fillColor,
+            OverlayRenderSystem.StyleFlags style,
+            float2 start,
+            float2 end,
+            float width,
+            float dashLength,
+            float gapLength)
         {
-            var child = new GameObject(name);
-            child.transform.SetParent(_mLineObject.transform, false);
-            var renderer = child.AddComponent<LineRenderer>();
-            renderer.useWorldSpace = true;
-            renderer.loop = loop;
-            renderer.positionCount = positionCount;
-            renderer.widthMultiplier = width;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            renderer.startColor = color;
-            renderer.endColor = color;
-            if (_mMaterial != null)
+            buffer.DrawDashedLine(outlineColor, fillColor, 4f, style, CreateLine(start, end), width, dashLength, gapLength);
+        }
+
+        private static Line3.Segment CreateLine(float2 start, float2 end)
+        {
+            return new Line3.Segment
             {
-                renderer.material = _mMaterial;
-            }
-
-            return renderer;
-        }
-
-        private static Vector3 ToVector3(float3 value)
-        {
-            return new Vector3(value.x, value.y, value.z);
-        }
-
-        private static void SetMaterialColor(Material material, Color color)
-        {
-            material.color = color;
-            if (material.HasProperty(kBaseColor))
-            {
-                material.SetColor(kBaseColor, color);
-            }
-
-            if (material.HasProperty(kColor))
-            {
-                material.SetColor(kColor, color);
-            }
+                a = new float3(start.x, 0f, start.y),
+                b = new float3(end.x, 0f, end.y)
+            };
         }
 
         private static string FormatFloat2(float2 value)
