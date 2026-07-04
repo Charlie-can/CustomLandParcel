@@ -84,6 +84,39 @@ namespace CustomLandParcel.Data
             return true;
         }
 
+        public bool MergeSelectedParcelWith(Guid targetId, string reason)
+        {
+            var selected = SelectedParcel;
+            var target = FindParcel(targetId);
+            if (selected == null || target == null || selected.Id == target.Id)
+            {
+                _mWarn(
+                    $"Parcel merge ignored ({reason}): selected={FormatGuid(_mSelection.ParcelId)}, target={FormatGuid(targetId)}.");
+                return false;
+            }
+
+            var mergedPoints = PolygonMath.ConvexHull(selected.Points.Concat(target.Points));
+            if (mergedPoints.Count < ParcelGeometry.MinimumVertexCount)
+            {
+                _mWarn(
+                    $"Parcel merge ignored ({reason}): selected={FormatGuid(selected.Id)}, target={FormatGuid(target.Id)}, hullPoints={mergedPoints.Count}.");
+                return false;
+            }
+
+            var previousSelected = selected.ToString();
+            var previousTarget = target.ToString();
+            selected.Name = $"{selected.Name} + {target.Name}";
+            selected.State = selected.IsPurchased && target.IsPurchased ? LandParcelState.Purchased : LandParcelState.Available;
+            selected.Points.Clear();
+            selected.Points.AddRange(mergedPoints);
+            _mParcels.Remove(target);
+            _mSelection = new ParcelSelection(selected.Id, ClampVertexIndex(selected, _mSelection.VertexIndex));
+            RepriceParcel(selected, $"{reason}: merge parcels");
+            MarkChanged(
+                $"{reason}: merged selected={previousSelected} with target={previousTarget}, result={selected}");
+            return true;
+        }
+
         public bool SelectParcel(Guid id, string reason)
         {
             if (id == Guid.Empty || FindParcel(id) == null)

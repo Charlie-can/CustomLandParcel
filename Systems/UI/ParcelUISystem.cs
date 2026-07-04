@@ -60,6 +60,7 @@ namespace CustomLandParcel.Systems
             AddBinding(new TriggerBinding<int>(Group, "selectNextParcel", SelectNextParcel));
             AddBinding(new TriggerBinding<string>(Group, "renameSelectedParcel", RenameSelectedParcel));
             AddBinding(new TriggerBinding(Group, "deleteSelectedParcel", DeleteSelectedParcel));
+            AddBinding(new TriggerBinding<string>(Group, "mergeSelectedParcelWith", MergeSelectedParcelWith));
             AddBinding(new TriggerBinding(Group, "purchaseSelectedParcel", PurchaseSelectedParcel));
             AddBinding(new TriggerBinding<bool>(Group, "setParcelEditToolActive", SetParcelEditToolActive));
             AddBinding(new TriggerBinding<float2>(Group, "moveSelectedParcel", MoveSelectedParcel));
@@ -133,6 +134,18 @@ namespace CustomLandParcel.Systems
         {
             _mParcelStoreSystem.DeleteSelectedParcel("ui deleteSelectedParcel");
             LogTrigger("deleteSelectedParcel");
+        }
+
+        private void MergeSelectedParcelWith(string idText)
+        {
+            if (!TryParseGuid(idText, out var id))
+            {
+                Mod.log.Warn($"Parcel UI trigger mergeSelectedParcelWith ignored: invalid id='{idText}'.");
+                return;
+            }
+
+            _mParcelStoreSystem.MergeSelectedParcelWith(id, "ui mergeSelectedParcelWith");
+            LogTrigger($"mergeSelectedParcelWith id={idText}");
         }
 
         private void PurchaseSelectedParcel()

@@ -56,6 +56,11 @@ namespace CustomLandParcel.Systems
             return Store.DeleteSelectedParcel(reason);
         }
 
+        internal bool MergeSelectedParcelWith(Guid targetId, string reason)
+        {
+            return Store.MergeSelectedParcelWith(targetId, reason);
+        }
+
         internal bool SelectParcel(Guid id, string reason)
         {
             return Store.SelectParcel(id, reason);

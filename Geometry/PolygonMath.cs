@@ -95,5 +95,62 @@ namespace CustomLandParcel.Geometry
             var t = math.clamp(math.dot(point - a, ab) / lengthSq, 0f, 1f);
             return math.distance(point, a + ab * t);
         }
+
+        public static List<float2> ConvexHull(IEnumerable<float2> points)
+        {
+            var ordered = points
+                .OrderBy(point => point.x)
+                .ThenBy(point => point.y)
+                .ToList();
+            var unique = new List<float2>(ordered.Count);
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                if (unique.Count == 0 || math.distancesq(unique[unique.Count - 1], ordered[i]) > 0.0001f)
+                {
+                    unique.Add(ordered[i]);
+                }
+            }
+
+            if (unique.Count <= 1)
+            {
+                return unique;
+            }
+
+            var lower = new List<float2>();
+            for (var i = 0; i < unique.Count; i++)
+            {
+                while (lower.Count >= 2 &&
+                       Cross(lower[lower.Count - 2], lower[lower.Count - 1], unique[i]) <= 0f)
+                {
+                    lower.RemoveAt(lower.Count - 1);
+                }
+
+                lower.Add(unique[i]);
+            }
+
+            var upper = new List<float2>();
+            for (var i = unique.Count - 1; i >= 0; i--)
+            {
+                while (upper.Count >= 2 &&
+                       Cross(upper[upper.Count - 2], upper[upper.Count - 1], unique[i]) <= 0f)
+                {
+                    upper.RemoveAt(upper.Count - 1);
+                }
+
+                upper.Add(unique[i]);
+            }
+
+            lower.RemoveAt(lower.Count - 1);
+            upper.RemoveAt(upper.Count - 1);
+            lower.AddRange(upper);
+            return lower;
+        }
+
+        private static float Cross(float2 origin, float2 a, float2 b)
+        {
+            var oa = a - origin;
+            var ob = b - origin;
+            return oa.x * ob.y - oa.y * ob.x;
+        }
     }
 }

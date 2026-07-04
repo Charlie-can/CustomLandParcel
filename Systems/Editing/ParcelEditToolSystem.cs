@@ -20,8 +20,8 @@ namespace CustomLandParcel.Systems
     /// </summary>
     public partial class ParcelEditToolSystem : ToolBaseSystem
     {
-        private const float VertexHitRadius = 55f;
-        private const float EdgeHitRadius = 38f;
+        private const float VertexHitRadius = 85f;
+        private const float EdgeHitRadius = 45f;
         private const float ClosePolygonRadius = 75f;
         private const float DragStartDistance = 8f;
 
@@ -153,7 +153,7 @@ namespace CustomLandParcel.Systems
                 BeginPointerAction(cursorPosition);
             }
 
-            if (_mPointerDown && applyAction.IsInProgress())
+            if (_mPointerDown && !applyAction.WasReleasedThisFrame())
             {
                 UpdatePointerAction(cursorPosition);
             }
@@ -198,7 +198,13 @@ namespace CustomLandParcel.Systems
                 return;
             }
 
-            _mDragStarted = true;
+            if (!_mDragStarted)
+            {
+                _mDragStarted = true;
+                Mod.log.Info(
+                    $"Parcel edit drag started: target={Session.DragTarget}, origin={ParcelGeometry.Format(_mPointerDownPosition)}, cursor={ParcelGeometry.Format(cursorPosition)}.");
+            }
+
             if (Session.DragTarget.Kind == ParcelEditHitKind.Vertex)
             {
                 _mParcelStoreSystem.SetVertexPositionTransient(

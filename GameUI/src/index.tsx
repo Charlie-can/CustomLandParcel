@@ -33,20 +33,41 @@ const buttonBase: React.CSSProperties = {
   minHeight: "32rem",
   padding: "0 10rem",
   color: "rgba(245, 248, 252, 0.96)",
-  background: "rgba(55, 68, 82, 0.96)",
+  background: "rgba(45, 55, 66, 0.96)",
   border: "1rem solid rgba(255, 255, 255, 0.18)",
   borderRadius: "4rem",
-  fontSize: "14rem",
+  fontSize: "13rem",
+  fontWeight: 600,
 };
 
 const primaryButton: React.CSSProperties = {
   ...buttonBase,
-  background: "rgba(37, 109, 151, 0.98)",
+  background: "rgba(31, 111, 154, 0.98)",
 };
 
 const dangerButton: React.CSSProperties = {
   ...buttonBase,
   background: "rgba(128, 48, 54, 0.98)",
+};
+
+const subtleButton: React.CSSProperties = {
+  ...buttonBase,
+  background: "rgba(255, 255, 255, 0.08)",
+};
+
+const launcherButton: React.CSSProperties = {
+  ...primaryButton,
+  width: "44rem",
+  height: "44rem",
+  minHeight: "44rem",
+  padding: 0,
+  borderRadius: "5rem",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "15rem",
+  fontWeight: 800,
+  letterSpacing: 0,
 };
 
 const inputStyle: React.CSSProperties = {
@@ -103,7 +124,7 @@ function moveSelectedVertex(x: number, y: number): void {
 
 function ParcelRow({ parcel }: { parcel: Parcel }): JSX.Element {
   const isPurchased = parcel.state === "Purchased";
-  const style: React.CSSProperties = {
+  const selectStyle: React.CSSProperties = {
     display: "grid",
     gridTemplateColumns: "1fr auto",
     gap: "6rem",
@@ -115,12 +136,22 @@ function ParcelRow({ parcel }: { parcel: Parcel }): JSX.Element {
   };
 
   return (
-    <Button style={style} onSelect={() => trigger(GROUP, "selectParcel", parcel.id)} tooltipLabel="Select parcel">
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parcel.name || "Parcel"}</span>
-      <span style={{ color: isPurchased ? "#8fe0a2" : "#f0c66d" }}>{parcel.state}</span>
-      <span style={{ color: "rgba(245, 248, 252, 0.72)" }}>{formatArea(parcel.area)}</span>
-      <span style={{ color: "rgba(245, 248, 252, 0.72)", textAlign: "right" }}>${formatMoney(parcel.price)}</span>
-    </Button>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 70rem", gap: "6rem" }}>
+      <Button style={selectStyle} onSelect={() => trigger(GROUP, "selectParcel", parcel.id)} tooltipLabel="Select parcel">
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parcel.name || "Parcel"}</span>
+        <span style={{ color: isPurchased ? "#8fe0a2" : "#f0c66d" }}>{parcel.state}</span>
+        <span style={{ color: "rgba(245, 248, 252, 0.72)" }}>{formatArea(parcel.area)}</span>
+        <span style={{ color: "rgba(245, 248, 252, 0.72)", textAlign: "right" }}>${formatMoney(parcel.price)}</span>
+      </Button>
+      <Button
+        style={parcel.selected ? subtleButton : buttonBase}
+        disabled={parcel.selected}
+        onSelect={() => trigger(GROUP, "mergeSelectedParcelWith", parcel.id)}
+        tooltipLabel="Merge this parcel into the selected parcel"
+      >
+        Merge
+      </Button>
+    </div>
   );
 }
 
@@ -170,42 +201,43 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         position: "absolute",
         top: "96rem",
         left: "24rem",
-        width: "420rem",
+        width: "438rem",
         maxHeight: "760rem",
         zIndex: 10000,
         display: "flex",
         flexDirection: "column",
-        gap: "10rem",
-        padding: "14rem",
+        gap: "12rem",
+        padding: "12rem",
         color: "rgba(245, 248, 252, 0.96)",
-        background: "rgba(18, 24, 31, 0.92)",
+        background: "rgba(18, 24, 31, 0.94)",
         border: "1rem solid rgba(255, 255, 255, 0.18)",
-        borderRadius: "6rem",
+        borderRadius: "5rem",
         boxShadow: "0 12rem 38rem rgba(0, 0, 0, 0.36)",
-        fontSize: "15rem",
+        fontSize: "14rem",
       }}
     >
-      <div style={{ ...rowStyle, justifyContent: "space-between" }}>
-        <div style={{ fontSize: "18rem", fontWeight: 700 }}>Custom Land Parcel</div>
-        <Button style={buttonBase} onSelect={onClose} tooltipLabel="Close panel">
+      <div style={{ ...rowStyle, justifyContent: "space-between", minHeight: "34rem" }}>
+        <div>
+          <div style={{ fontSize: "17rem", fontWeight: 800 }}>Custom Land Parcel</div>
+          <div style={{ color: "rgba(245, 248, 252, 0.58)", fontSize: "12rem" }}>{summary}</div>
+        </div>
+        <Button style={{ ...subtleButton, width: "34rem", padding: 0 }} onSelect={onClose} tooltipLabel="Close panel">
           x
         </Button>
       </div>
 
-      <div style={rowStyle}>
+      <div style={{ ...rowStyle, padding: "8rem", background: "rgba(255, 255, 255, 0.05)", borderRadius: "4rem" }}>
         <Button
           style={editToolActive ? primaryButton : buttonBase}
           onSelect={() => trigger(GROUP, "setParcelEditToolActive", !editToolActive)}
           tooltipLabel="Toggle map parcel edit tool"
         >
-          {editToolActive ? "Map Tool On" : "Map Tool Off"}
+          {editToolActive ? "Map Edit On" : "Map Edit Off"}
         </Button>
         <Button style={buttonBase} onSelect={() => trigger(GROUP, "addRectangle")} tooltipLabel="Add a rectangular parcel">
-          Add Rectangle
+          Rectangle
         </Button>
       </div>
-
-      <div style={{ color: "rgba(245, 248, 252, 0.68)", lineHeight: "20rem" }}>{summary}</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "8rem" }}>
         <div style={{ fontWeight: 700 }}>Parcels</div>
@@ -317,8 +349,8 @@ function CustomLandParcelRoot(): JSX.Element {
 
   return (
     <>
-      <Button style={primaryButton} selected={open} onSelect={() => setOpen(!open)} tooltipLabel="Open Custom Land Parcel panel">
-        Land Parcels
+      <Button style={launcherButton} selected={open} onSelect={() => setOpen(!open)} tooltipLabel="Open Custom Land Parcel panel">
+        LP
       </Button>
       {open && <ParcelPanel onClose={() => setOpen(false)} />}
     </>
