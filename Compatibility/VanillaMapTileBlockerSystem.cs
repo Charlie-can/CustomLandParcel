@@ -4,6 +4,7 @@ using Game.Common;
 using Game.Prefabs;
 using Game.Tools;
 using Colossal.Mathematics;
+using CustomLandParcel.Data;
 using CustomLandParcel.Geometry;
 using CustomLandParcel.Systems;
 using Unity.Collections;
@@ -24,10 +25,17 @@ namespace CustomLandParcel.Compatibility
         {
         }
 
+        public struct VanillaMapTileHiddenByParcel : IComponentData
+        {
+            public bool m_AddedHidden;
+        }
+
         private EntityQuery _mMapTilePrefabQuery;
         private EntityQuery _mMapTileQuery;
+        private EntityQuery _mLockedMapTileQuery;
         private EntityQuery _mBlockerQuery;
         private EntityQuery _mBlockerReadyQuery;
+        private EntityQuery _mHiddenByParcelQuery;
         private ParcelStoreSystem _mParcelStoreSystem;
         private bool _mCreated;
         private uint _mAppliedParcelVersion;
@@ -51,7 +59,15 @@ namespace CustomLandParcel.Compatibility
                 ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<Temp>(),
                 ComponentType.Exclude<VanillaMapTileBlocker>());
+            _mLockedMapTileQuery = GetEntityQuery(
+                ComponentType.ReadOnly<MapTile>(),
+                ComponentType.ReadOnly<Node>(),
+                ComponentType.ReadOnly<Native>(),
+                ComponentType.Exclude<Deleted>(),
+                ComponentType.Exclude<Temp>(),
+                ComponentType.Exclude<VanillaMapTileBlocker>());
             _mBlockerQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileBlocker>());
+            _mHiddenByParcelQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileHiddenByParcel>());
             _mBlockerReadyQuery = GetEntityQuery(
                 ComponentType.ReadOnly<VanillaMapTileBlocker>(),
                 ComponentType.ReadOnly<Area>(),
@@ -61,6 +77,12 @@ namespace CustomLandParcel.Compatibility
                 ComponentType.ReadOnly<PrefabRef>(),
                 ComponentType.ReadOnly<Native>());
             Mod.log.Info("VanillaMapTileBlockerSystem enabled as compatibility layer. Waiting for map tile prefab and map tile entities.");
+        }
+
+        protected override void OnDestroy()
+        {
+            RestoreHiddenMapTiles("system destroyed");
+            base.OnDestroy();
         }
 
         protected override void OnUpdate()
@@ -120,6 +142,7 @@ namespace CustomLandParcel.Compatibility
                 var prefab = prefabs[0];
                 LogPrefabDiagnostics(prefab, prefabs.Length);
                 UpsertBlockers(prefab, worldMin, worldMax, parcelMin, parcelMax);
+                RefreshHiddenMapTiles(parcelMin, parcelMax);
                 _mCreated = true;
                 _mAppliedParcelVersion = currentVersion;
                 _mPendingParcelVersion = 0;
@@ -141,7 +164,7 @@ namespace CustomLandParcel.Compatibility
 
         private void DisableCompatibilityLayer()
         {
-            if (_mCreated || !_mBlockerQuery.IsEmptyIgnoreFilter)
+            if (_mCreated || !_mBlockerQuery.IsEmptyIgnoreFilter || !_mHiddenByParcelQuery.IsEmptyIgnoreFilter)
             {
                 using var blockers = _mBlockerQuery.ToEntityArray(Allocator.Temp);
                 for (var i = 0; i < blockers.Length; i++)
@@ -149,6 +172,7 @@ namespace CustomLandParcel.Compatibility
                     EntityManager.DestroyEntity(blockers[i]);
                 }
 
+                RestoreHiddenMapTiles("compatibility disabled");
                 Mod.log.Info(
                     $"VanillaMapTileBlockerSystem compatibility layer disabled; destroyed {blockers.Length} blocker entity/entities.");
             }
@@ -362,6 +386,180 @@ namespace CustomLandParcel.Compatibility
             {
                 entities.Dispose();
             }
+        }
+
+        private void RefreshHiddenMapTiles(float2 parcelMin, float2 parcelMax)
+        {
+            var restored = RestoreStaleHiddenMapTiles(parcelMin, parcelMax);
+            var hidden = 0;
+            var repaired = 0;
+            using var entities = _mLockedMapTileQuery.ToEntityArray(Allocator.Temp);
+            for (var i = 0; i < entities.Length; i++)
+            {
+                var entity = entities[i];
+                if (!TileOverlapsPurchasedParcel(entity, parcelMin, parcelMax))
+                {
+                    continue;
+                }
+
+                if (EntityManager.HasComponent<VanillaMapTileHiddenByParcel>(entity))
+                {
+                    var marker = EntityManager.GetComponentData<VanillaMapTileHiddenByParcel>(entity);
+                    if (marker.m_AddedHidden && !EntityManager.HasComponent<Hidden>(entity))
+                    {
+                        EntityManager.AddComponentData(entity, default(Hidden));
+                        repaired++;
+                    }
+
+                    continue;
+                }
+
+                var alreadyHidden = EntityManager.HasComponent<Hidden>(entity);
+                EntityManager.AddComponentData(entity, new VanillaMapTileHiddenByParcel
+                {
+                    m_AddedHidden = !alreadyHidden
+                });
+
+                if (!alreadyHidden)
+                {
+                    EntityManager.AddComponentData(entity, default(Hidden));
+                }
+
+                hidden++;
+            }
+
+            if (hidden > 0 || repaired > 0 || restored > 0)
+            {
+                Mod.log.Info(
+                    $"Parcel map tile mask refreshed: hidden={hidden}, repaired={repaired}, restored={restored}, lockedTileCandidates={entities.Length}, activeParcelBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, {_mParcelStoreSystem.GetSummary()}.");
+            }
+        }
+
+        private int RestoreStaleHiddenMapTiles(float2 parcelMin, float2 parcelMax)
+        {
+            var restored = 0;
+            using var marked = _mHiddenByParcelQuery.ToEntityArray(Allocator.Temp);
+            for (var i = 0; i < marked.Length; i++)
+            {
+                var entity = marked[i];
+                var shouldStayHidden = EntityManager.Exists(entity)
+                                       && EntityManager.HasComponent<MapTile>(entity)
+                                       && EntityManager.HasComponent<Native>(entity)
+                                       && !EntityManager.HasComponent<VanillaMapTileBlocker>(entity)
+                                       && TileOverlapsPurchasedParcel(entity, parcelMin, parcelMax);
+                if (!shouldStayHidden && RestoreHiddenMapTile(entity))
+                {
+                    restored++;
+                }
+            }
+
+            return restored;
+        }
+
+        private void RestoreHiddenMapTiles(string reason)
+        {
+            using var marked = _mHiddenByParcelQuery.ToEntityArray(Allocator.Temp);
+            var restored = 0;
+            for (var i = 0; i < marked.Length; i++)
+            {
+                if (RestoreHiddenMapTile(marked[i]))
+                {
+                    restored++;
+                }
+            }
+
+            if (restored > 0)
+            {
+                Mod.log.Info($"Parcel map tile mask restored {restored} vanilla map tile(s) ({reason}).");
+            }
+        }
+
+        private bool RestoreHiddenMapTile(Entity entity)
+        {
+            if (!EntityManager.Exists(entity) || !EntityManager.HasComponent<VanillaMapTileHiddenByParcel>(entity))
+            {
+                return false;
+            }
+
+            var marker = EntityManager.GetComponentData<VanillaMapTileHiddenByParcel>(entity);
+            EntityManager.RemoveComponent<VanillaMapTileHiddenByParcel>(entity);
+            if (marker.m_AddedHidden && EntityManager.HasComponent<Hidden>(entity))
+            {
+                EntityManager.RemoveComponent<Hidden>(entity);
+            }
+
+            return true;
+        }
+
+        private bool TileOverlapsPurchasedParcel(Entity entity, float2 parcelMin, float2 parcelMax)
+        {
+            if (!EntityManager.HasBuffer<Node>(entity))
+            {
+                return false;
+            }
+
+            var nodes = EntityManager.GetBuffer<Node>(entity, true);
+            if (nodes.Length == 0)
+            {
+                return false;
+            }
+
+            var tileMin = new float2(float.MaxValue, float.MaxValue);
+            var tileMax = new float2(float.MinValue, float.MinValue);
+            for (var i = 0; i < nodes.Length; i++)
+            {
+                var xz = nodes[i].m_Position.xz;
+                tileMin = math.min(tileMin, xz);
+                tileMax = math.max(tileMax, xz);
+            }
+
+            if (!BoundsIntersect(tileMin, tileMax, parcelMin, parcelMax))
+            {
+                return false;
+            }
+
+            for (var i = 0; i < _mParcelStoreSystem.Parcels.Count; i++)
+            {
+                var parcel = _mParcelStoreSystem.Parcels[i];
+                if (!parcel.IsPurchased || !PolygonMath.TryGetBounds(parcel.Points, out var currentMin, out var currentMax) ||
+                    !BoundsIntersect(tileMin, tileMax, currentMin, currentMax))
+                {
+                    continue;
+                }
+
+                if (PolygonMath.ContainsPoint(parcel.Points, (tileMin + tileMax) * 0.5f))
+                {
+                    return true;
+                }
+
+                for (var nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
+                {
+                    if (PolygonMath.ContainsPoint(parcel.Points, nodes[nodeIndex].m_Position.xz))
+                    {
+                        return true;
+                    }
+                }
+
+                for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
+                {
+                    if (PointInsideBounds(parcel.Points[pointIndex], tileMin, tileMax))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool BoundsIntersect(float2 aMin, float2 aMax, float2 bMin, float2 bMax)
+        {
+            return math.all(aMin <= bMax) && math.all(bMin <= aMax);
+        }
+
+        private static bool PointInsideBounds(float2 point, float2 min, float2 max)
+        {
+            return math.all(point >= min) && math.all(point <= max);
         }
 
         private static Game.Areas.Geometry CreateGeometry(float2 min, float2 max)

@@ -26,16 +26,16 @@ namespace CustomLandParcel
 
             updateSystem.UpdateAt<ParcelStoreSystem>(SystemUpdatePhase.Serialize);
             updateSystem.UpdateAt<ParcelPurchaseSystem>(SystemUpdatePhase.ModificationEnd);
+            updateSystem.UpdateAt<VanillaMapTileBlockerSystem>(SystemUpdatePhase.PreTool);
             updateSystem.UpdateAt<ParcelEditToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<ParcelBoundaryControlSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ConstructionRestrictionSystem>(SystemUpdatePhase.PostTool);
-            updateSystem.UpdateAt<VanillaMapTileBlockerSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelPlacementDiagnosticsSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ConstructionRestrictionPresentationSystem>(SystemUpdatePhase.PreCulling);
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
             updateSystem.UpdateAt<ParcelUISystem>(SystemUpdatePhase.UIUpdate);
             log.Info(
-                "Registered ParcelStoreSystem at Serialize, ParcelPurchaseSystem at ModificationEnd, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/VanillaMapTileBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
+                "Registered ParcelStoreSystem at Serialize, ParcelPurchaseSystem at ModificationEnd, VanillaMapTileBlockerSystem at PreTool, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/ParcelPlacementDiagnosticsSystem at PostTool, ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {
