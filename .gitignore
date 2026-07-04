@@ -1,0 +1,19 @@
+﻿# Build output
+bin/
+obj/
+Library/
+
+# IDE
+.idea/
+.vs/
+*.user
+*.suo
+
+# Logs and temporary files
+*.log
+*.tmp
+*.cache
+
+# OS
+.DS_Store
+Thumbs.db
