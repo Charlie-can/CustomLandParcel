@@ -42,6 +42,15 @@ namespace CustomLandParcel.Systems
             return Store.CreateRectangle(name, center, size, reason);
         }
 
+        internal LandParcel CreatePolygon(
+            string name,
+            System.Collections.Generic.IEnumerable<float2> points,
+            LandParcelState state,
+            string reason)
+        {
+            return Store.CreatePolygon(name, points, state, reason);
+        }
+
         internal bool DeleteSelectedParcel(string reason)
         {
             return Store.DeleteSelectedParcel(reason);
@@ -67,9 +76,19 @@ namespace CustomLandParcel.Systems
             return Store.PurchaseSelectedParcel(reason);
         }
 
+        internal bool SetSelectedParcelState(LandParcelState state, string reason)
+        {
+            return Store.SetSelectedParcelState(state, reason);
+        }
+
         internal bool MoveSelectedParcel(float2 delta, string reason)
         {
             return Store.MoveSelectedParcel(delta, reason);
+        }
+
+        internal bool MoveParcel(Guid parcelId, float2 delta, string reason)
+        {
+            return Store.MoveParcel(parcelId, delta, reason);
         }
 
         internal bool ResizeSelectedParcel(float amount, string reason)
@@ -87,9 +106,19 @@ namespace CustomLandParcel.Systems
             return Store.MoveSelectedVertex(delta, reason);
         }
 
+        internal bool SetVertexPosition(Guid parcelId, int vertexIndex, float2 position, string reason)
+        {
+            return Store.SetVertexPosition(parcelId, vertexIndex, position, reason);
+        }
+
         internal bool InsertVertexAfterSelected(string reason)
         {
             return Store.InsertVertexAfterSelected(reason);
+        }
+
+        internal bool InsertVertexOnEdge(Guid parcelId, int edgeIndex, string reason)
+        {
+            return Store.InsertVertexOnEdge(parcelId, edgeIndex, reason);
         }
 
         internal bool DeleteSelectedVertex(string reason)

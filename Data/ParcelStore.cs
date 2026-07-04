@@ -41,8 +41,30 @@ namespace CustomLandParcel.Data
         {
             var parcel = ParcelGeometry.CreateRectangle(name, center, size);
             _mParcels.Add(parcel);
+            RepriceParcel(parcel, $"{reason}: create rectangle");
             _mSelection = new ParcelSelection(parcel.Id, 0);
             MarkChanged($"{reason}: created {parcel} and selected it");
+            return parcel;
+        }
+
+        public LandParcel CreatePolygon(string name, IEnumerable<float2> points, LandParcelState state, string reason)
+        {
+            var pointList = points == null ? new List<float2>() : new List<float2>(points);
+            if (pointList.Count < ParcelGeometry.MinimumVertexCount)
+            {
+                _mWarn(
+                    $"Parcel polygon create ignored ({reason}): pointCount={pointList.Count}, minimum={ParcelGeometry.MinimumVertexCount}.");
+                return null;
+            }
+
+            var parcel = new LandParcel(Guid.NewGuid(), name, pointList)
+            {
+                State = state
+            };
+            _mParcels.Add(parcel);
+            RepriceParcel(parcel, $"{reason}: create polygon");
+            _mSelection = new ParcelSelection(parcel.Id, 0);
+            MarkChanged($"{reason}: created polygon {parcel} and selected it");
             return parcel;
         }
 
@@ -107,33 +129,54 @@ namespace CustomLandParcel.Data
 
         public bool PurchaseSelectedParcel(string reason)
         {
+            return SetSelectedParcelState(LandParcelState.Purchased, reason);
+        }
+
+        public bool SetSelectedParcelState(LandParcelState state, string reason)
+        {
             var selected = SelectedParcel;
             if (selected == null)
             {
-                _mWarn($"Parcel purchase ignored ({reason}): no selected parcel.");
+                _mWarn($"Parcel state change ignored ({reason}): no selected parcel.");
                 return false;
             }
 
-            selected.State = LandParcelState.Purchased;
-            MarkChanged($"{reason}: purchased {selected}");
+            var previous = selected.State;
+            selected.State = state;
+            RepriceParcel(selected, $"{reason}: state change");
+            MarkChanged($"{reason}: changed parcel {FormatGuid(selected.Id)} state from {previous} to {state}, {selected}");
             return true;
         }
 
         public bool MoveSelectedParcel(float2 delta, string reason)
         {
             var selected = SelectedParcel;
-            if (selected == null)
+            if (selected != null)
             {
-                _mWarn($"Parcel move ignored ({reason}): no selected parcel.");
+                return MoveParcel(selected.Id, delta, reason);
+            }
+
+            _mWarn($"Parcel move ignored ({reason}): no selected parcel.");
+            return false;
+        }
+
+        public bool MoveParcel(Guid parcelId, float2 delta, string reason)
+        {
+            var parcel = FindParcel(parcelId);
+            if (parcel == null)
+            {
+                _mWarn($"Parcel move ignored ({reason}): parcel={FormatGuid(parcelId)} was not found.");
                 return false;
             }
 
-            for (var i = 0; i < selected.Points.Count; i++)
+            for (var i = 0; i < parcel.Points.Count; i++)
             {
-                selected.Points[i] += delta;
+                parcel.Points[i] += delta;
             }
 
-            MarkChanged($"{reason}: moved {selected} by {ParcelGeometry.Format(delta)}");
+            RepriceParcel(parcel, $"{reason}: move parcel");
+            _mSelection = new ParcelSelection(parcel.Id, ClampVertexIndex(parcel, _mSelection.VertexIndex));
+            MarkChanged($"{reason}: moved {parcel} by {ParcelGeometry.Format(delta)}");
             return true;
         }
 
@@ -158,7 +201,7 @@ namespace CustomLandParcel.Data
                 selected.Points[i] += math.normalize(direction) * amount;
             }
 
-            ParcelGeometry.RecalculatePrice(selected);
+            RepriceParcel(selected, $"{reason}: resize parcel");
             MarkChanged($"{reason}: resized {selected} by {amount:F1}");
             return true;
         }
@@ -194,10 +237,29 @@ namespace CustomLandParcel.Data
                 return false;
             }
 
-            selected.Points[_mSelection.VertexIndex] += delta;
-            ParcelGeometry.RecalculatePrice(selected);
+            return SetVertexPosition(
+                selected.Id,
+                _mSelection.VertexIndex,
+                selected.Points[_mSelection.VertexIndex] + delta,
+                reason);
+        }
+
+        public bool SetVertexPosition(Guid parcelId, int vertexIndex, float2 position, string reason)
+        {
+            var selected = FindParcel(parcelId);
+            if (selected == null || vertexIndex < 0 || vertexIndex >= selected.Points.Count)
+            {
+                _mWarn(
+                    $"Vertex set ignored ({reason}): parcel={FormatGuid(parcelId)}, vertex={vertexIndex}.");
+                return false;
+            }
+
+            var previous = selected.Points[vertexIndex];
+            selected.Points[vertexIndex] = position;
+            _mSelection = new ParcelSelection(selected.Id, vertexIndex);
+            RepriceParcel(selected, $"{reason}: set vertex");
             MarkChanged(
-                $"{reason}: moved vertex={_mSelection.VertexIndex} by {ParcelGeometry.Format(delta)}, parcel={selected}");
+                $"{reason}: set vertex={vertexIndex} from {ParcelGeometry.Format(previous)} to {ParcelGeometry.Format(position)}, parcel={selected}");
             return true;
         }
 
@@ -211,11 +273,32 @@ namespace CustomLandParcel.Data
             }
 
             var index = _mSelection.VertexIndex >= 0 ? _mSelection.VertexIndex : selected.Points.Count - 1;
+            return InsertVertexOnEdge(selected.Id, index, reason);
+        }
+
+        public bool InsertVertexOnEdge(Guid parcelId, int edgeIndex, string reason)
+        {
+            var selected = FindParcel(parcelId);
+            if (selected == null || selected.Points.Count < ParcelGeometry.MinimumVertexCount)
+            {
+                _mWarn(
+                    $"Vertex insert ignored ({reason}): parcel={FormatGuid(parcelId)} is missing or invalid.");
+                return false;
+            }
+
+            if (edgeIndex < 0 || edgeIndex >= selected.Points.Count)
+            {
+                _mWarn(
+                    $"Vertex insert ignored ({reason}): edgeIndex={edgeIndex}, vertexCount={selected.Points.Count}.");
+                return false;
+            }
+
+            var index = edgeIndex;
             var nextIndex = (index + 1) % selected.Points.Count;
             var inserted = (selected.Points[index] + selected.Points[nextIndex]) * 0.5f;
             selected.Points.Insert(index + 1, inserted);
-            _mSelection.VertexIndex = index + 1;
-            ParcelGeometry.RecalculatePrice(selected);
+            _mSelection = new ParcelSelection(selected.Id, index + 1);
+            RepriceParcel(selected, $"{reason}: insert vertex");
             MarkChanged(
                 $"{reason}: inserted vertex={_mSelection.VertexIndex} at {ParcelGeometry.Format(inserted)}, parcel={selected}");
             return true;
@@ -240,7 +323,7 @@ namespace CustomLandParcel.Data
             var removed = selected.Points[_mSelection.VertexIndex];
             selected.Points.RemoveAt(_mSelection.VertexIndex);
             _mSelection.VertexIndex = ClampVertexIndex(selected, _mSelection.VertexIndex);
-            ParcelGeometry.RecalculatePrice(selected);
+            RepriceParcel(selected, $"{reason}: delete vertex");
             MarkChanged(
                 $"{reason}: deleted vertex at {ParcelGeometry.Format(removed)}, nextVertex={_mSelection.VertexIndex}, parcel={selected}");
             return true;
@@ -291,6 +374,11 @@ namespace CustomLandParcel.Data
         {
             _mParcels.Clear();
             _mParcels.AddRange(parcels);
+            for (var i = 0; i < _mParcels.Count; i++)
+            {
+                RepriceParcel(_mParcels[i], $"{reason}: load");
+            }
+
             _mVersion = math.max(savedVersion, _mVersion) + 1;
             _mSelection = new ParcelSelection(selectedParcelId, selectedVertexIndex);
             EnsureValidSelection(reason);
@@ -330,6 +418,7 @@ namespace CustomLandParcel.Data
                 ParcelGeometry.CreateRectangle("Parcel 1", ParcelGeometry.DefaultCenter, ParcelGeometry.DefaultSize);
             parcel.State = LandParcelState.Purchased;
             _mParcels.Add(parcel);
+            RepriceParcel(parcel, $"{reason}: seed default");
             _mSelection = new ParcelSelection(parcel.Id, 0);
             _mInfo($"{reason}: seeded default {parcel}.");
         }
@@ -371,6 +460,20 @@ namespace CustomLandParcel.Data
         {
             _mVersion++;
             _mInfo($"ParcelStore changed: {message}; {GetSummary()}.");
+        }
+
+        private void RepriceParcel(LandParcel parcel, string reason)
+        {
+            if (parcel == null)
+            {
+                return;
+            }
+
+            var previous = parcel.Price;
+            var result = ParcelPriceCalculator.Calculate(parcel, _mParcels);
+            parcel.Price = result.Price;
+            _mInfo(
+                $"Parcel price recalculated ({reason}): parcel={FormatGuid(parcel.Id)}, previous={previous}, {result.ToLogString()}.");
         }
     }
 }

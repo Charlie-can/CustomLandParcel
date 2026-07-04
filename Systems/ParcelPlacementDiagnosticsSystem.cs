@@ -17,30 +17,30 @@ namespace CustomLandParcel.Systems
     public partial class ParcelPlacementDiagnosticsSystem : GameSystemBase
     {
         private const int MaxSamples = 3;
-        private EntityQuery m_ObjectPreviewQuery;
-        private EntityQuery m_CurvePreviewQuery;
-        private ParcelStoreSystem m_ParcelStoreSystem;
-        private int m_LastOutsideCount = -1;
-        private int m_LastOutsideErrorCount = -1;
-        private int m_FramesSinceLog;
+        private EntityQuery _mObjectPreviewQuery;
+        private EntityQuery _mCurvePreviewQuery;
+        private ParcelStoreSystem _mParcelStoreSystem;
+        private int _mLastOutsideCount = -1;
+        private int _mLastOutsideErrorCount = -1;
+        private int _mFramesSinceLog;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
 
-            m_ObjectPreviewQuery = GetEntityQuery(
+            _mObjectPreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
                 ComponentType.ReadOnly<Transform>(),
                 ComponentType.Exclude<Deleted>());
 
-            m_CurvePreviewQuery = GetEntityQuery(
+            _mCurvePreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
                 ComponentType.ReadOnly<Curve>(),
                 ComponentType.Exclude<Deleted>());
 
             Mod.log.Info(
-                $"ParcelPlacementDiagnosticsSystem enabled. {m_ParcelStoreSystem.GetSummary()}. Logging only active create/modify/replace/upgrade previews.");
+                $"ParcelPlacementDiagnosticsSystem enabled. {_mParcelStoreSystem.GetSummary()}. Logging only active create/modify/replace/upgrade previews.");
         }
 
         protected override void OnUpdate()
@@ -49,29 +49,29 @@ namespace CustomLandParcel.Systems
             CollectObjectDiagnostics(ref diagnostics);
             CollectCurveDiagnostics(ref diagnostics);
 
-            m_FramesSinceLog++;
-            var shouldLog = diagnostics.OutsideCount != m_LastOutsideCount
-                            || diagnostics.OutsideWithErrorCount != m_LastOutsideErrorCount
-                            || (diagnostics.OutsideCount > 0 && m_FramesSinceLog >= 60);
+            _mFramesSinceLog++;
+            var shouldLog = diagnostics.OutsideCount != _mLastOutsideCount
+                            || diagnostics.OutsideWithErrorCount != _mLastOutsideErrorCount
+                            || (diagnostics.OutsideCount > 0 && _mFramesSinceLog >= 60);
 
             if (!shouldLog)
             {
                 return;
             }
 
-            m_LastOutsideCount = diagnostics.OutsideCount;
-            m_LastOutsideErrorCount = diagnostics.OutsideWithErrorCount;
-            m_FramesSinceLog = 0;
+            _mLastOutsideCount = diagnostics.OutsideCount;
+            _mLastOutsideErrorCount = diagnostics.OutsideWithErrorCount;
+            _mFramesSinceLog = 0;
 
             if (diagnostics.ActiveCount == 0)
             {
                 Mod.log.Info(
-                    $"Placement diagnostics: no active construction preview entities found this frame. {m_ParcelStoreSystem.GetSummary()}.");
+                    $"Placement diagnostics: no active construction preview entities found this frame. {_mParcelStoreSystem.GetSummary()}.");
                 return;
             }
 
             Mod.log.Info(
-                $"Placement diagnostics: active={diagnostics.ActiveCount}, inside={diagnostics.InsideCount}, outside={diagnostics.OutsideCount}, outsideWithError={diagnostics.OutsideWithErrorCount}, outsideWithoutError={diagnostics.OutsideCount - diagnostics.OutsideWithErrorCount}, {m_ParcelStoreSystem.GetSummary()}, samples={diagnostics.Samples}.");
+                $"Placement diagnostics: active={diagnostics.ActiveCount}, inside={diagnostics.InsideCount}, outside={diagnostics.OutsideCount}, outsideWithError={diagnostics.OutsideWithErrorCount}, outsideWithoutError={diagnostics.OutsideCount - diagnostics.OutsideWithErrorCount}, {_mParcelStoreSystem.GetSummary()}, samples={diagnostics.Samples}.");
 
             if (diagnostics.OutsideCount > 0 && diagnostics.OutsideWithErrorCount == 0)
             {
@@ -82,9 +82,9 @@ namespace CustomLandParcel.Systems
 
         private void CollectObjectDiagnostics(ref PlacementDiagnostics diagnostics)
         {
-            var entities = m_ObjectPreviewQuery.ToEntityArray(Allocator.Temp);
-            var temps = m_ObjectPreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
-            var transforms = m_ObjectPreviewQuery.ToComponentDataArray<Transform>(Allocator.Temp);
+            var entities = _mObjectPreviewQuery.ToEntityArray(Allocator.Temp);
+            var temps = _mObjectPreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
+            var transforms = _mObjectPreviewQuery.ToComponentDataArray<Transform>(Allocator.Temp);
 
             try
             {
@@ -110,9 +110,9 @@ namespace CustomLandParcel.Systems
 
         private void CollectCurveDiagnostics(ref PlacementDiagnostics diagnostics)
         {
-            var entities = m_CurvePreviewQuery.ToEntityArray(Allocator.Temp);
-            var temps = m_CurvePreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
-            var curves = m_CurvePreviewQuery.ToComponentDataArray<Curve>(Allocator.Temp);
+            var entities = _mCurvePreviewQuery.ToEntityArray(Allocator.Temp);
+            var temps = _mCurvePreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
+            var curves = _mCurvePreviewQuery.ToComponentDataArray<Curve>(Allocator.Temp);
 
             try
             {
@@ -144,7 +144,7 @@ namespace CustomLandParcel.Systems
             Temp temp)
         {
             diagnostics.ActiveCount++;
-            var inside = m_ParcelStoreSystem.IsBuildable(point);
+            var inside = _mParcelStoreSystem.IsBuildable(point);
             if (inside)
             {
                 diagnostics.InsideCount++;
@@ -162,7 +162,7 @@ namespace CustomLandParcel.Systems
             Temp temp)
         {
             diagnostics.ActiveCount++;
-            var inside = PlacementPreviewUtility.CurveInsideParcel(curve, m_ParcelStoreSystem);
+            var inside = PlacementPreviewUtility.CurveInsideParcel(curve, _mParcelStoreSystem);
             if (inside)
             {
                 diagnostics.InsideCount++;

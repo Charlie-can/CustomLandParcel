@@ -32,7 +32,7 @@ namespace CustomLandParcel.Geometry
 
         public static int RecalculatePrice(LandParcel parcel)
         {
-            parcel.Price = math.max(1000, (int)(PolygonMath.Area(parcel.Points) * 0.25f));
+            parcel.Price = ParcelPriceCalculator.Calculate(parcel, null).Price;
             return parcel.Price;
         }
 

@@ -17,6 +17,8 @@ namespace CustomLandParcel.Systems
     {
         private const string Group = "customLandParcel";
         private ParcelStoreSystem _mParcelStoreSystem;
+        private ParcelPurchaseSystem _mParcelPurchaseSystem;
+        private ParcelEditToolSystem _mParcelEditToolSystem;
         private RawValueBinding _mParcelsBinding;
         private uint _mLastLoggedVersion;
 
@@ -27,6 +29,8 @@ namespace CustomLandParcel.Systems
         {
             base.OnCreate();
             _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            _mParcelPurchaseSystem = World.GetOrCreateSystemManaged<ParcelPurchaseSystem>();
+            _mParcelEditToolSystem = World.GetOrCreateSystemManaged<ParcelEditToolSystem>();
 
             AddUpdateBinding(_mParcelsBinding = new RawValueBinding(Group, "parcels", BindParcels));
             AddUpdateBinding(new GetterValueBinding<string>(
@@ -45,6 +49,10 @@ namespace CustomLandParcel.Systems
                 Group,
                 "summary",
                 () => _mParcelStoreSystem.GetSummary()));
+            AddUpdateBinding(new GetterValueBinding<bool>(
+                Group,
+                "parcelEditToolActive",
+                () => _mParcelEditToolSystem.IsToolActive));
 
             AddBinding(new TriggerBinding(Group, "addRectangle", AddRectangle));
             AddBinding(new TriggerBinding<string>(Group, "selectParcel", SelectParcel));
@@ -53,6 +61,7 @@ namespace CustomLandParcel.Systems
             AddBinding(new TriggerBinding<string>(Group, "renameSelectedParcel", RenameSelectedParcel));
             AddBinding(new TriggerBinding(Group, "deleteSelectedParcel", DeleteSelectedParcel));
             AddBinding(new TriggerBinding(Group, "purchaseSelectedParcel", PurchaseSelectedParcel));
+            AddBinding(new TriggerBinding<bool>(Group, "setParcelEditToolActive", SetParcelEditToolActive));
             AddBinding(new TriggerBinding<float2>(Group, "moveSelectedParcel", MoveSelectedParcel));
             AddBinding(new TriggerBinding<float2>(Group, "moveSelectedVertex", MoveSelectedVertex));
             AddBinding(new TriggerBinding(Group, "insertVertexAfterSelected", InsertVertexAfterSelected));
@@ -127,8 +136,14 @@ namespace CustomLandParcel.Systems
 
         private void PurchaseSelectedParcel()
         {
-            _mParcelStoreSystem.PurchaseSelectedParcel("ui purchaseSelectedParcel");
+            _mParcelPurchaseSystem.PurchaseSelectedParcel("ui purchaseSelectedParcel");
             LogTrigger("purchaseSelectedParcel");
+        }
+
+        private void SetParcelEditToolActive(bool active)
+        {
+            _mParcelEditToolSystem.SetToolActive(active, "ui setParcelEditToolActive");
+            LogTrigger($"setParcelEditToolActive active={active}");
         }
 
         private void MoveSelectedParcel(float2 delta)

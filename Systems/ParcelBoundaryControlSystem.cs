@@ -24,16 +24,16 @@ namespace CustomLandParcel.Systems
             CustomLandParcelSettings.ShrinkAction
         };
 
-        private ParcelStoreSystem m_ParcelStoreSystem;
-        private bool m_ActionsEnabled;
-        private bool m_EditMode;
-        private int m_EditActionCooldownFrames;
-        private int m_FramesUntilLog;
+        private ParcelStoreSystem _mParcelStoreSystem;
+        private bool _mActionsEnabled;
+        private bool _mEditMode;
+        private int _mEditActionCooldownFrames;
+        private int _mFramesUntilLog;
 
         protected override void OnCreate()
         {
             base.OnCreate();
-            m_ParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
             Mod.log.Info(
                 "ParcelBoundaryControlSystem enabled. Toggle edit mode with the configured mod keybinding, then move/resize the parcel with configured bindings.");
         }
@@ -49,76 +49,76 @@ namespace CustomLandParcel.Systems
 
             if (WasPressed(CustomLandParcelSettings.ToggleEditModeAction))
             {
-                m_EditMode = !m_EditMode;
+                _mEditMode = !_mEditMode;
                 Mod.log.Info(
-                    $"Parcel edit mode {(m_EditMode ? "enabled" : "disabled")}. {m_ParcelStoreSystem.GetSummary()}.");
+                    $"Parcel edit mode {(_mEditMode ? "enabled" : "disabled")}. {_mParcelStoreSystem.GetSummary()}.");
             }
 
-            if (!m_EditMode)
+            if (!_mEditMode)
             {
                 return;
             }
 
-            if (m_EditActionCooldownFrames > 0)
+            if (_mEditActionCooldownFrames > 0)
             {
-                m_EditActionCooldownFrames--;
+                _mEditActionCooldownFrames--;
                 return;
             }
 
             var changed = false;
             if (WasPressed(CustomLandParcelSettings.MoveNorthAction))
             {
-                m_ParcelStoreSystem.MoveSelectedParcel(new float2(0f, MoveStep), "move north hotkey");
+                _mParcelStoreSystem.MoveSelectedParcel(new float2(0f, MoveStep), "move north hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.MoveSouthAction))
             {
-                m_ParcelStoreSystem.MoveSelectedParcel(new float2(0f, -MoveStep), "move south hotkey");
+                _mParcelStoreSystem.MoveSelectedParcel(new float2(0f, -MoveStep), "move south hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.MoveWestAction))
             {
-                m_ParcelStoreSystem.MoveSelectedParcel(new float2(-MoveStep, 0f), "move west hotkey");
+                _mParcelStoreSystem.MoveSelectedParcel(new float2(-MoveStep, 0f), "move west hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.MoveEastAction))
             {
-                m_ParcelStoreSystem.MoveSelectedParcel(new float2(MoveStep, 0f), "move east hotkey");
+                _mParcelStoreSystem.MoveSelectedParcel(new float2(MoveStep, 0f), "move east hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.GrowAction))
             {
-                m_ParcelStoreSystem.ResizeSelectedParcel(ResizeStep, "grow hotkey");
+                _mParcelStoreSystem.ResizeSelectedParcel(ResizeStep, "grow hotkey");
                 changed = true;
             }
 
             if (WasPressed(CustomLandParcelSettings.ShrinkAction))
             {
-                m_ParcelStoreSystem.ResizeSelectedParcel(-ResizeStep, "shrink hotkey");
+                _mParcelStoreSystem.ResizeSelectedParcel(-ResizeStep, "shrink hotkey");
                 changed = true;
             }
 
             if (changed)
             {
-                m_EditActionCooldownFrames = EditActionCooldownFrames;
-                m_FramesUntilLog = 300;
+                _mEditActionCooldownFrames = EditActionCooldownFrames;
+                _mFramesUntilLog = 300;
                 Mod.log.Info(
                     $"Parcel edit action cooldown started for {EditActionCooldownFrames} frames to avoid rapid native area rebuilds.");
                 return;
             }
 
-            if (m_FramesUntilLog <= 0)
+            if (_mFramesUntilLog <= 0)
             {
                 Mod.log.Info(
-                    $"Parcel edit mode active. {m_ParcelStoreSystem.GetSummary()}, moveStep={MoveStep:F0}, resizeStep={ResizeStep:F0}, cooldownFrames={EditActionCooldownFrames}.");
-                m_FramesUntilLog = 300;
+                    $"Parcel edit mode active. {_mParcelStoreSystem.GetSummary()}, moveStep={MoveStep:F0}, resizeStep={ResizeStep:F0}, cooldownFrames={EditActionCooldownFrames}.");
+                _mFramesUntilLog = 300;
             }
 
-            m_FramesUntilLog--;
+            _mFramesUntilLog--;
         }
 
         private static bool WasPressed(string actionName)
@@ -129,7 +129,7 @@ namespace CustomLandParcel.Systems
 
         private void EnsureActionsEnabled()
         {
-            if (m_ActionsEnabled)
+            if (_mActionsEnabled)
             {
                 return;
             }
@@ -152,7 +152,7 @@ namespace CustomLandParcel.Systems
             }
 
             if (enabledCount != ActionNames.Length) return;
-            m_ActionsEnabled = true;
+            _mActionsEnabled = true;
             Mod.log.Info($"Parcel control enabled {enabledCount}/{ActionNames.Length} input actions.");
         }
     }

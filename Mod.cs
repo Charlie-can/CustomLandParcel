@@ -25,6 +25,8 @@ namespace CustomLandParcel
             log.Info("Registered CustomLandParcel settings, localization, and keybindings in the game options UI.");
 
             updateSystem.UpdateAt<ParcelStoreSystem>(SystemUpdatePhase.Serialize);
+            updateSystem.UpdateAt<ParcelPurchaseSystem>(SystemUpdatePhase.ModificationEnd);
+            updateSystem.UpdateAt<ParcelEditToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<ParcelBoundaryControlSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ConstructionRestrictionSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<VanillaMapTileBlockerSystem>(SystemUpdatePhase.PostTool);
@@ -33,7 +35,7 @@ namespace CustomLandParcel
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
             updateSystem.UpdateAt<ParcelUISystem>(SystemUpdatePhase.UIUpdate);
             log.Info(
-                "Registered ParcelStoreSystem at Serialize, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/VanillaMapTileBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
+                "Registered ParcelStoreSystem at Serialize, ParcelPurchaseSystem at ModificationEnd, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/VanillaMapTileBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {
