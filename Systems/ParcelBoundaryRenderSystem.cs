@@ -36,55 +36,66 @@ namespace CustomLandParcel.Systems
 
             var min = ConstructionRestrictionSystem.ParcelMin;
             var max = ConstructionRestrictionSystem.ParcelMax;
-            DrawBuildableArea(buffer, min, max);
+            DrawParcelBoundary(buffer, min, max);
             _mOverlayRenderSystem.AddBufferWriter(default(JobHandle));
 
             if (_mFramesUntilLog <= 0)
             {
                 Mod.log.Info(
-                    $"Parcel overlay marker submitted this frame: parcel={FormatFloat2(min)}..{FormatFloat2(max)}, outer dashed boundary + interior grid/diagonals.");
+                    $"Parcel overlay marker submitted this frame: parcel={FormatFloat2(min)}..{FormatFloat2(max)}, subtle dashed boundary only.");
                 _mFramesUntilLog = 300;
             }
 
             _mFramesUntilLog--;
         }
 
-        private static void DrawBuildableArea(OverlayRenderSystem.Buffer buffer, float2 min, float2 max)
+        private static void DrawParcelBoundary(OverlayRenderSystem.Buffer buffer, float2 min, float2 max)
         {
-            var outlineColor = new Color(0.05f, 1f, 0.28f, 1f);
-            var fillColor = new Color(0.05f, 1f, 0.28f, 0.85f);
-            var gridColor = new Color(0.05f, 1f, 0.28f, 0.45f);
+            var outlineColor = new Color(0.86f, 0.95f, 1f, 0.78f);
+            var fillColor = new Color(0.86f, 0.95f, 1f, 0.58f);
             const OverlayRenderSystem.StyleFlags style = OverlayRenderSystem.StyleFlags.Projected |
                                                            OverlayRenderSystem.StyleFlags.DepthFadeBelow;
 
-            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(min.x, min.y), new float2(max.x, min.y), 28f, 72f, 28f);
-            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(max.x, min.y), new float2(max.x, max.y), 28f, 72f, 28f);
-            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(max.x, max.y), new float2(min.x, max.y), 28f, 72f, 28f);
-            DrawDashedSegment(buffer, outlineColor, fillColor, style, new float2(min.x, max.y), new float2(min.x, min.y), 28f, 72f, 28f);
-
-            const int divisions = 4;
-            for (var i = 1; i < divisions; i++)
-            {
-                var t = i / (float)divisions;
-                var x = math.lerp(min.x, max.x, t);
-                var z = math.lerp(min.y, max.y, t);
-                DrawSegment(buffer, gridColor, style, new float2(x, min.y), new float2(x, max.y), 10f);
-                DrawSegment(buffer, gridColor, style, new float2(min.x, z), new float2(max.x, z), 10f);
-            }
-
-            DrawSegment(buffer, gridColor, style, min, max, 10f);
-            DrawSegment(buffer, gridColor, style, new float2(min.x, max.y), new float2(max.x, min.y), 10f);
-        }
-
-        private static void DrawSegment(
-            OverlayRenderSystem.Buffer buffer,
-            Color color,
-            OverlayRenderSystem.StyleFlags style,
-            float2 start,
-            float2 end,
-            float width)
-        {
-            buffer.DrawLine(color, color, 0f, style, CreateLine(start, end), width, new float2(0.25f, 0.25f));
+            DrawDashedSegment(
+                buffer,
+                outlineColor,
+                fillColor,
+                style,
+                new float2(min.x, min.y),
+                new float2(max.x, min.y),
+                12f,
+                64f,
+                42f);
+            DrawDashedSegment(
+                buffer,
+                outlineColor,
+                fillColor,
+                style,
+                new float2(max.x, min.y),
+                new float2(max.x, max.y),
+                12f,
+                64f,
+                42f);
+            DrawDashedSegment(
+                buffer,
+                outlineColor,
+                fillColor,
+                style,
+                new float2(max.x, max.y),
+                new float2(min.x, max.y),
+                12f,
+                64f,
+                42f);
+            DrawDashedSegment(
+                buffer,
+                outlineColor,
+                fillColor,
+                style,
+                new float2(min.x, max.y),
+                new float2(min.x, min.y),
+                12f,
+                64f,
+                42f);
         }
 
         private static void DrawDashedSegment(
@@ -98,7 +109,15 @@ namespace CustomLandParcel.Systems
             float dashLength,
             float gapLength)
         {
-            buffer.DrawDashedLine(outlineColor, fillColor, 4f, style, CreateLine(start, end), width, dashLength, gapLength);
+            buffer.DrawDashedLine(
+                outlineColor,
+                fillColor,
+                4f,
+                style,
+                CreateLine(start, end),
+                width,
+                dashLength,
+                gapLength);
         }
 
         private static Line3.Segment CreateLine(float2 start, float2 end)
