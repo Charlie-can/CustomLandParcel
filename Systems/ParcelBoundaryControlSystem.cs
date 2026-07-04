@@ -12,7 +12,19 @@ namespace CustomLandParcel.Systems
         private const float MoveStep = 100f;
         private const float ResizeStep = 100f;
 
+        private static readonly string[] ActionNames =
+        {
+            CustomLandParcelSettings.ToggleEditModeAction,
+            CustomLandParcelSettings.MoveNorthAction,
+            CustomLandParcelSettings.MoveSouthAction,
+            CustomLandParcelSettings.MoveWestAction,
+            CustomLandParcelSettings.MoveEastAction,
+            CustomLandParcelSettings.GrowAction,
+            CustomLandParcelSettings.ShrinkAction
+        };
+
         private ParcelBoundsSystem m_ParcelBoundsSystem;
+        private bool m_ActionsEnabled;
         private bool m_EditMode;
         private int m_FramesUntilLog;
 
@@ -30,6 +42,8 @@ namespace CustomLandParcel.Systems
             {
                 return;
             }
+
+            EnsureActionsEnabled();
 
             if (WasPressed(CustomLandParcelSettings.ToggleEditModeAction))
             {
@@ -100,6 +114,37 @@ namespace CustomLandParcel.Systems
         {
             ProxyAction action = Mod.Settings.GetAction(actionName);
             return action != null && action.WasPressedThisFrame();
+        }
+
+        private void EnsureActionsEnabled()
+        {
+            if (m_ActionsEnabled)
+            {
+                return;
+            }
+
+            var enabledCount = 0;
+            for (var i = 0; i < ActionNames.Length; i++)
+            {
+                var actionName = ActionNames[i];
+                var action = Mod.Settings.GetAction(actionName);
+                if (action == null)
+                {
+                    Mod.log.Warn($"Parcel control action '{actionName}' was not found in InputManager yet.");
+                    continue;
+                }
+
+                action.shouldBeEnabled = true;
+                enabledCount++;
+                Mod.log.Info(
+                    $"Parcel control action ready: name={actionName}, enabled={action.enabled}, shouldBeEnabled={action.shouldBeEnabled}, isSet={action.isSet}, binding={action}.");
+            }
+
+            if (enabledCount == ActionNames.Length)
+            {
+                m_ActionsEnabled = true;
+                Mod.log.Info($"Parcel control enabled {enabledCount}/{ActionNames.Length} input actions.");
+            }
         }
     }
 }
