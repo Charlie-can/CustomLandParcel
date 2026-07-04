@@ -18,9 +18,10 @@ namespace CustomLandParcel
             log.Info(nameof(OnLoad));
 
             Settings = new CustomLandParcelSettings(this);
+            CustomLandParcelLocalization.Register(Settings);
             Settings.RegisterInOptionsUI();
             Settings.RegisterKeyBindings();
-            log.Info("Registered CustomLandParcel settings and keybindings in the game options UI.");
+            log.Info("Registered CustomLandParcel settings, localization, and keybindings in the game options UI.");
 
             updateSystem.UpdateAt<ParcelBoundsSystem>(SystemUpdatePhase.Serialize);
             updateSystem.UpdateAt<ParcelBoundaryControlSystem>(SystemUpdatePhase.PostTool);
@@ -40,6 +41,7 @@ namespace CustomLandParcel
         {
             log.Info(nameof(OnDispose));
             Settings?.UnregisterInOptionsUI();
+            CustomLandParcelLocalization.Unregister();
             Settings = null;
         }
     }
