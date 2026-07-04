@@ -15,6 +15,8 @@ namespace CustomLandParcel.Systems
     /// </summary>
     public partial class ParcelBoundaryBlockerSystem : GameSystemBase
     {
+        private const int RebuildDelayFrames = 20;
+
         public struct ParcelBoundaryBlocker : IComponentData
         {
         }
@@ -26,6 +28,8 @@ namespace CustomLandParcel.Systems
         private ParcelBoundsSystem m_ParcelBoundsSystem;
         private bool m_Created;
         private uint m_AppliedParcelVersion;
+        private uint m_PendingParcelVersion;
+        private int m_RebuildDelayFramesRemaining;
         private int m_VerificationFramesRemaining;
 
         protected override void OnCreate()
@@ -63,6 +67,11 @@ namespace CustomLandParcel.Systems
                 return;
             }
 
+            if (m_Created && !ParcelChangeReadyToApply(currentVersion))
+            {
+                return;
+            }
+
             if (m_MapTilePrefabQuery.IsEmptyIgnoreFilter || m_MapTileQuery.IsEmptyIgnoreFilter)
             {
                 if (m_VerificationFramesRemaining == 0)
@@ -92,6 +101,8 @@ namespace CustomLandParcel.Systems
                 CreateBlockers(prefab, worldMin, worldMax, parcel);
                 m_Created = true;
                 m_AppliedParcelVersion = currentVersion;
+                m_PendingParcelVersion = 0;
+                m_RebuildDelayFramesRemaining = 0;
                 m_VerificationFramesRemaining = 120;
                 Mod.log.Info(
                     $"Created vanilla MapTile-style blockers around parcel. World bounds x/z {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}; parcel {parcel}; parcelVersion={m_AppliedParcelVersion}.");
@@ -100,6 +111,26 @@ namespace CustomLandParcel.Systems
             {
                 prefabs.Dispose();
             }
+        }
+
+        private bool ParcelChangeReadyToApply(uint currentVersion)
+        {
+            if (m_PendingParcelVersion != currentVersion)
+            {
+                m_PendingParcelVersion = currentVersion;
+                m_RebuildDelayFramesRemaining = RebuildDelayFrames;
+                Mod.log.Info(
+                    $"Parcel blocker rebuild queued after parcel change. appliedVersion={m_AppliedParcelVersion}, pendingVersion={m_PendingParcelVersion}, delayFrames={RebuildDelayFrames}, parcel={m_ParcelBoundsSystem.Bounds}.");
+                return false;
+            }
+
+            if (m_RebuildDelayFramesRemaining > 0)
+            {
+                m_RebuildDelayFramesRemaining--;
+                return false;
+            }
+
+            return true;
         }
 
         private void ClearExistingBlockers()

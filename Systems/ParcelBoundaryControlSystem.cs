@@ -11,6 +11,7 @@ namespace CustomLandParcel.Systems
     {
         private const float MoveStep = 100f;
         private const float ResizeStep = 100f;
+        private const int EditActionCooldownFrames = 30;
 
         private static readonly string[] ActionNames =
         {
@@ -26,6 +27,7 @@ namespace CustomLandParcel.Systems
         private ParcelBoundsSystem m_ParcelBoundsSystem;
         private bool m_ActionsEnabled;
         private bool m_EditMode;
+        private int m_EditActionCooldownFrames;
         private int m_FramesUntilLog;
 
         protected override void OnCreate()
@@ -54,6 +56,12 @@ namespace CustomLandParcel.Systems
 
             if (!m_EditMode)
             {
+                return;
+            }
+
+            if (m_EditActionCooldownFrames > 0)
+            {
+                m_EditActionCooldownFrames--;
                 return;
             }
 
@@ -96,14 +104,17 @@ namespace CustomLandParcel.Systems
 
             if (changed)
             {
+                m_EditActionCooldownFrames = EditActionCooldownFrames;
                 m_FramesUntilLog = 300;
+                Mod.log.Info(
+                    $"Parcel edit action cooldown started for {EditActionCooldownFrames} frames to avoid rapid native area rebuilds.");
                 return;
             }
 
             if (m_FramesUntilLog <= 0)
             {
                 Mod.log.Info(
-                    $"Parcel edit mode active. parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}, moveStep={MoveStep:F0}, resizeStep={ResizeStep:F0}.");
+                    $"Parcel edit mode active. parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}, moveStep={MoveStep:F0}, resizeStep={ResizeStep:F0}, cooldownFrames={EditActionCooldownFrames}.");
                 m_FramesUntilLog = 300;
             }
 
