@@ -12,7 +12,7 @@ namespace CustomLandParcel.Compatibility
 {
     /// <summary>
     /// Runtime compatibility layer for vanilla map tiles.
-    /// It unlocks vanilla Native MapTile entities that overlap purchased custom parcels, while
+    /// It unlocks vanilla Native MapTile entities that overlap buildable custom parcels, while
     /// ConstructionRestrictionSystem remains the only source of custom-parcel boundary blocking.
     /// </summary>
     public partial class VanillaMapTileUnlockSystem : GameSystemBase
@@ -27,13 +27,19 @@ namespace CustomLandParcel.Compatibility
         {
         }
 
+        public struct VanillaMapTileHiddenByParcelSetting : IComponentData
+        {
+        }
+
         private EntityQuery _mVanillaMapTileQuery;
         private EntityQuery _mLegacyBlockerQuery;
         private EntityQuery _mUnlockedByParcelQuery;
+        private EntityQuery _mHiddenBySettingQuery;
         private ParcelStoreSystem _mParcelStoreSystem;
         private int _mUnlockMaskRefreshFramesRemaining;
         private bool _mLastCompatibilityEnabled;
         private bool _mLegacyBlockersChecked;
+        private bool _mInitialVanillaBoundsChecked;
         private int _mDisabledLogCooldownFrames;
 
         protected override void OnCreate()
@@ -48,11 +54,13 @@ namespace CustomLandParcel.Compatibility
                 ComponentType.Exclude<VanillaMapTileBlocker>());
             _mLegacyBlockerQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileBlocker>());
             _mUnlockedByParcelQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileUnlockedByParcel>());
+            _mHiddenBySettingQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileHiddenByParcelSetting>());
             Mod.log.Info("VanillaMapTileUnlockSystem enabled as vanilla MapTile unlock compatibility layer.");
         }
 
         protected override void OnDestroy()
         {
+            RestoreMapTileVisibility("system destroyed");
             RestoreUnlockedMapTiles("system destroyed");
             DestroyLegacyBlockers("system destroyed");
             base.OnDestroy();
@@ -91,22 +99,23 @@ namespace CustomLandParcel.Compatibility
 
         private static bool IsCompatibilityEnabled()
         {
-            return Mod.Settings != null && Mod.Settings.EnableVanillaMapTileCompatibility;
+            return Mod.Settings == null || Mod.Settings.EnableVanillaMapTileCompatibility;
         }
 
         private void DisableCompatibilityLayer()
         {
             var destroyedBlockers = DestroyLegacyBlockers("compatibility disabled");
+            var shownTiles = RestoreMapTileVisibility("compatibility disabled");
             var restoredTiles = RestoreUnlockedMapTiles("compatibility disabled");
-            if (destroyedBlockers > 0 || restoredTiles > 0)
+            if (destroyedBlockers > 0 || restoredTiles > 0 || shownTiles > 0)
             {
                 Mod.log.Info(
-                    $"Vanilla MapTile unlock compatibility disabled; destroyedLegacyBlockers={destroyedBlockers}, restoredTiles={restoredTiles}.");
+                    $"Vanilla MapTile unlock compatibility disabled by settings; destroyedLegacyBlockers={destroyedBlockers}, restoredTiles={restoredTiles}, shownTiles={shownTiles}.");
             }
             else if (_mDisabledLogCooldownFrames <= 0)
             {
-                Mod.log.Info(
-                    "Vanilla MapTile unlock compatibility is disabled by settings. Direct ConstructionRestrictionSystem remains active.");
+                Mod.log.Warn(
+                    "Vanilla MapTile unlock compatibility is disabled by settings; vanilla unpurchased map tiles will keep blocking construction outside city limits.");
                 _mDisabledLogCooldownFrames = 600;
             }
 
@@ -118,19 +127,23 @@ namespace CustomLandParcel.Compatibility
 
         private void MaintainUnlockedMapTiles()
         {
-            if (_mParcelStoreSystem.TryGetPurchasedUnionBounds(out var parcelMin, out var parcelMax))
+            TryAlignDefaultParcelToVanillaOwnedTiles();
+            if (_mParcelStoreSystem.TryGetBuildableUnionBounds(out var parcelMin, out var parcelMax))
             {
                 RefreshUnlockedMapTiles(parcelMin, parcelMax);
                 return;
             }
 
-            RestoreUnlockedMapTiles("no purchased custom parcel union");
+            RestoreMapTileVisibility("no buildable custom parcel union");
+            RestoreUnlockedMapTiles("no buildable custom parcel union");
         }
 
         private void RefreshUnlockedMapTiles(float2 parcelMin, float2 parcelMax)
         {
             var restored = RestoreStaleUnlockedMapTiles(parcelMin, parcelMax);
+            var shownBySetting = RestoreVisibleMapTilesOutsideBuildableBounds(parcelMin, parcelMax);
             var unlocked = 0;
+            var hiddenBySetting = 0;
             var alreadyUnlockedByParcel = 0;
             var alreadyVanillaOwned = 0;
             var overlapCandidates = 0;
@@ -138,12 +151,17 @@ namespace CustomLandParcel.Compatibility
             for (var i = 0; i < entities.Length; i++)
             {
                 var entity = entities[i];
-                if (!TileOverlapsPurchasedParcel(entity, parcelMin, parcelMax))
+                if (!TileOverlapsBuildableParcel(entity, parcelMin, parcelMax))
                 {
                     continue;
                 }
 
                 overlapCandidates++;
+                if (ApplyMapTileVisibility(entity))
+                {
+                    hiddenBySetting++;
+                }
+
                 if (EntityManager.HasComponent<VanillaMapTileUnlockedByParcel>(entity))
                 {
                     alreadyUnlockedByParcel++;
@@ -162,10 +180,10 @@ namespace CustomLandParcel.Compatibility
                 unlocked++;
             }
 
-            if (unlocked > 0 || restored > 0)
+            if (unlocked > 0 || restored > 0 || hiddenBySetting > 0 || shownBySetting > 0)
             {
                 Mod.log.Info(
-                    $"Parcel map tile unlock mask refreshed: unlocked={unlocked}, restored={restored}, overlapCandidates={overlapCandidates}, alreadyUnlockedByParcel={alreadyUnlockedByParcel}, alreadyVanillaOwned={alreadyVanillaOwned}, mapTileCandidates={entities.Length}, purchasedBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, {_mParcelStoreSystem.GetSummary()}.");
+                    $"Parcel map tile unlock mask refreshed: unlocked={unlocked}, restored={restored}, hiddenBySetting={hiddenBySetting}, shownBySetting={shownBySetting}, overlapCandidates={overlapCandidates}, alreadyUnlockedByParcel={alreadyUnlockedByParcel}, alreadyVanillaOwned={alreadyVanillaOwned}, mapTileCandidates={entities.Length}, buildableBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, showVanillaBorders={ShouldShowVanillaUnlockedMapTileBorders()}, {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 
@@ -180,7 +198,7 @@ namespace CustomLandParcel.Compatibility
                                          && EntityManager.HasComponent<MapTile>(entity)
                                          && !EntityManager.HasComponent<Native>(entity)
                                          && !EntityManager.HasComponent<VanillaMapTileBlocker>(entity)
-                                         && TileOverlapsPurchasedParcel(entity, parcelMin, parcelMax);
+                                         && TileOverlapsBuildableParcel(entity, parcelMin, parcelMax);
                 if (!shouldStayUnlocked && RestoreUnlockedMapTile(entity))
                 {
                     restored++;
@@ -218,6 +236,7 @@ namespace CustomLandParcel.Compatibility
             }
 
             EntityManager.RemoveComponent<VanillaMapTileUnlockedByParcel>(entity);
+            RestoreMapTileVisibility(entity);
             if (!EntityManager.HasComponent<Native>(entity))
             {
                 EntityManager.AddComponentData(entity, default(Native));
@@ -243,6 +262,139 @@ namespace CustomLandParcel.Compatibility
             return blockers.Length;
         }
 
+        private void TryAlignDefaultParcelToVanillaOwnedTiles()
+        {
+            if (_mInitialVanillaBoundsChecked)
+            {
+                return;
+            }
+
+            using var entities = _mVanillaMapTileQuery.ToEntityArray(Allocator.Temp);
+            if (entities.Length == 0)
+            {
+                return;
+            }
+
+            _mInitialVanillaBoundsChecked = true;
+            var found = false;
+            var min = new float2(float.MaxValue, float.MaxValue);
+            var max = new float2(float.MinValue, float.MinValue);
+            for (var i = 0; i < entities.Length; i++)
+            {
+                var entity = entities[i];
+                if (EntityManager.HasComponent<Native>(entity) || !EntityManager.HasBuffer<Node>(entity))
+                {
+                    continue;
+                }
+
+                var nodes = EntityManager.GetBuffer<Node>(entity, true);
+                for (var nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
+                {
+                    var point = nodes[nodeIndex].m_Position.xz;
+                    min = math.min(min, point);
+                    max = math.max(max, point);
+                    found = true;
+                }
+            }
+
+            if (!found)
+            {
+                Mod.log.Info(
+                    $"Initial vanilla owned MapTile bounds not found; default custom parcel remains unchanged. mapTileCandidates={entities.Length}, {_mParcelStoreSystem.GetSummary()}.");
+                return;
+            }
+
+            var changed = _mParcelStoreSystem.TryAlignDefaultParcelToBounds(
+                min,
+                max,
+                "initial vanilla owned MapTile bounds");
+            Mod.log.Info(
+                $"Initial vanilla owned MapTile bounds checked: changed={changed}, bounds={ParcelGeometry.Format(min)}..{ParcelGeometry.Format(max)}, mapTileCandidates={entities.Length}, {_mParcelStoreSystem.GetSummary()}.");
+        }
+
+        private int RestoreMapTileVisibility(string reason)
+        {
+            using var marked = _mHiddenBySettingQuery.ToEntityArray(Allocator.Temp);
+            var shown = 0;
+            for (var i = 0; i < marked.Length; i++)
+            {
+                if (RestoreMapTileVisibility(marked[i]))
+                {
+                    shown++;
+                }
+            }
+
+            if (shown > 0)
+            {
+                Mod.log.Info($"Restored visibility for {shown} vanilla map tile(s) hidden by parcel setting ({reason}).");
+            }
+
+            return shown;
+        }
+
+        private int RestoreVisibleMapTilesOutsideBuildableBounds(float2 parcelMin, float2 parcelMax)
+        {
+            using var marked = _mHiddenBySettingQuery.ToEntityArray(Allocator.Temp);
+            var shown = 0;
+            for (var i = 0; i < marked.Length; i++)
+            {
+                var entity = marked[i];
+                var shouldStayHidden = EntityManager.Exists(entity)
+                                       && EntityManager.HasComponent<MapTile>(entity)
+                                       && !EntityManager.HasComponent<VanillaMapTileBlocker>(entity)
+                                       && !ShouldShowVanillaUnlockedMapTileBorders()
+                                       && TileOverlapsBuildableParcel(entity, parcelMin, parcelMax);
+                if (!shouldStayHidden && RestoreMapTileVisibility(entity))
+                {
+                    shown++;
+                }
+            }
+
+            return shown;
+        }
+
+        private bool ApplyMapTileVisibility(Entity entity)
+        {
+            if (ShouldShowVanillaUnlockedMapTileBorders())
+            {
+                return RestoreMapTileVisibility(entity);
+            }
+
+            if (!EntityManager.HasComponent<Hidden>(entity))
+            {
+                EntityManager.AddComponentData(entity, default(VanillaMapTileHiddenByParcelSetting));
+                EntityManager.AddComponentData(entity, default(Hidden));
+                MarkUpdated(entity);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool RestoreMapTileVisibility(Entity entity)
+        {
+            if (!EntityManager.Exists(entity) || !EntityManager.HasComponent<VanillaMapTileHiddenByParcelSetting>(entity))
+            {
+                return false;
+            }
+
+            EntityManager.RemoveComponent<VanillaMapTileHiddenByParcelSetting>(entity);
+            if (EntityManager.HasComponent<Hidden>(entity))
+            {
+                EntityManager.RemoveComponent<Hidden>(entity);
+                MarkUpdated(entity);
+                return true;
+            }
+
+            MarkUpdated(entity);
+            return false;
+        }
+
+        private static bool ShouldShowVanillaUnlockedMapTileBorders()
+        {
+            return Mod.Settings == null || Mod.Settings.ShowVanillaUnlockedMapTileBorders;
+        }
+
         private void MarkUpdated(Entity entity)
         {
             if (!EntityManager.HasComponent<Updated>(entity))
@@ -251,7 +403,7 @@ namespace CustomLandParcel.Compatibility
             }
         }
 
-        private bool TileOverlapsPurchasedParcel(Entity entity, float2 parcelMin, float2 parcelMax)
+        private bool TileOverlapsBuildableParcel(Entity entity, float2 parcelMin, float2 parcelMax)
         {
             if (!EntityManager.HasBuffer<Node>(entity))
             {
@@ -281,7 +433,7 @@ namespace CustomLandParcel.Compatibility
             for (var i = 0; i < _mParcelStoreSystem.Parcels.Count; i++)
             {
                 var parcel = _mParcelStoreSystem.Parcels[i];
-                if (!parcel.IsPurchased || !PolygonMath.TryGetBounds(parcel.Points, out var currentMin, out var currentMax) ||
+                if (!parcel.IsBuildable || !PolygonMath.TryGetBounds(parcel.Points, out var currentMin, out var currentMax) ||
                     !BoundsIntersect(tileMin, tileMax, currentMin, currentMax))
                 {
                     continue;

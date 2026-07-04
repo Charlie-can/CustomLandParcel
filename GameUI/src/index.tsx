@@ -101,10 +101,6 @@ function asPoint(value: unknown): Point {
   return { x: Number(point.x) || 0, y: Number(point.y) || 0 };
 }
 
-function formatMoney(value: number): string {
-  return Math.round(Number(value) || 0).toLocaleString();
-}
-
 function formatArea(value: number): string {
   return `${Math.round(Number(value) || 0).toLocaleString()} m2`;
 }
@@ -123,7 +119,7 @@ function moveSelectedVertex(x: number, y: number): void {
 }
 
 function ParcelRow({ parcel }: { parcel: Parcel }): JSX.Element {
-  const isPurchased = parcel.state === "Purchased";
+  const isLocked = parcel.state === "Locked";
   const selectStyle: React.CSSProperties = {
     display: "grid",
     gridTemplateColumns: "1fr auto",
@@ -136,12 +132,12 @@ function ParcelRow({ parcel }: { parcel: Parcel }): JSX.Element {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 70rem", gap: "6rem" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 72rem", gap: "6rem" }}>
       <Button style={selectStyle} onSelect={() => trigger(GROUP, "selectParcel", parcel.id)} tooltipLabel="Select parcel">
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parcel.name || "Parcel"}</span>
-        <span style={{ color: isPurchased ? "#8fe0a2" : "#f0c66d" }}>{parcel.state}</span>
+        <span style={{ color: isLocked ? "#ef8b91" : "#8fe0a2" }}>{isLocked ? "Locked" : "Active"}</span>
         <span style={{ color: "rgba(245, 248, 252, 0.72)" }}>{formatArea(parcel.area)}</span>
-        <span style={{ color: "rgba(245, 248, 252, 0.72)", textAlign: "right" }}>${formatMoney(parcel.price)}</span>
+        <span style={{ color: "rgba(245, 248, 252, 0.72)", textAlign: "right" }}>{parcel.points.length} pts</span>
       </Button>
       <Button
         style={parcel.selected ? subtleButton : buttonBase}
@@ -193,15 +189,13 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
     return found ? { ...found, selectedVertexIndex } : null;
   }, [parcels, selectedParcelId, selectedVertexIndex]);
 
-  const selectedPurchased = selected?.state === "Purchased";
-
   return (
     <div
       style={{
         position: "absolute",
-        top: "96rem",
+        top: "86rem",
         left: "24rem",
-        width: "438rem",
+        width: "448rem",
         maxHeight: "760rem",
         zIndex: 10000,
         display: "flex",
@@ -209,7 +203,7 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         gap: "12rem",
         padding: "12rem",
         color: "rgba(245, 248, 252, 0.96)",
-        background: "rgba(18, 24, 31, 0.94)",
+        background: "rgba(18, 25, 31, 0.96)",
         border: "1rem solid rgba(255, 255, 255, 0.18)",
         borderRadius: "5rem",
         boxShadow: "0 12rem 38rem rgba(0, 0, 0, 0.36)",
@@ -226,16 +220,20 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         </Button>
       </div>
 
-      <div style={{ ...rowStyle, padding: "8rem", background: "rgba(255, 255, 255, 0.05)", borderRadius: "4rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8rem" }}>
         <Button
-          style={editToolActive ? primaryButton : buttonBase}
+          style={{
+            ...(editToolActive ? primaryButton : buttonBase),
+            minHeight: "40rem",
+            background: editToolActive ? "rgba(27, 128, 178, 0.98)" : "rgba(45, 55, 66, 0.96)",
+          }}
           onSelect={() => trigger(GROUP, "setParcelEditToolActive", !editToolActive)}
           tooltipLabel="Toggle map parcel edit tool"
         >
-          {editToolActive ? "Map Edit On" : "Map Edit Off"}
+          {editToolActive ? "Map Tool On" : "Map Tool Off"}
         </Button>
         <Button style={buttonBase} onSelect={() => trigger(GROUP, "addRectangle")} tooltipLabel="Add a rectangular parcel">
-          Rectangle
+          New Rectangle
         </Button>
       </div>
 
@@ -258,17 +256,9 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
             onChange={(event) => selected && trigger(GROUP, "renameSelectedParcel", event.currentTarget.value)}
             title="Rename selected parcel"
           />
-          <Button
-            style={primaryButton}
-            disabled={!selected || selectedPurchased}
-            onSelect={() => trigger(GROUP, "purchaseSelectedParcel")}
-            tooltipLabel="Purchase selected parcel"
-          >
-            Buy ${selected ? formatMoney(selected.price) : 0}
-          </Button>
         </div>
 
-        <div style={rowStyle}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6rem" }}>
           <Button style={buttonBase} disabled={!selected} onSelect={() => trigger(GROUP, "selectNextParcel", -1)}>
             Prev
           </Button>
@@ -299,17 +289,17 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6rem" }}>
           <span />
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(0, step)}>
-            Up
+            North
           </Button>
           <span />
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(-step, 0)}>
-            Left
+            West
           </Button>
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(0, -step)}>
-            Down
+            South
           </Button>
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedParcel(step, 0)}>
-            Right
+            East
           </Button>
         </div>
       </div>
@@ -319,16 +309,16 @@ function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         <VertexList selected={selected} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "6rem" }}>
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(0, step)}>
-            V Up
+            V North
           </Button>
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(0, -step)}>
-            V Down
+            V South
           </Button>
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(-step, 0)}>
-            V Left
+            V West
           </Button>
           <Button style={buttonBase} disabled={!selected} onSelect={() => moveSelectedVertex(step, 0)}>
-            V Right
+            V East
           </Button>
         </div>
         <div style={rowStyle}>

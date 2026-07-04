@@ -15,13 +15,16 @@ namespace CustomLandParcel
         public const string ShrinkAction = "ShrinkParcel";
 
         private const bool DefaultEnableVanillaMapTileCompatibility = true;
+        private const bool DefaultShowVanillaUnlockedMapTileBorders = true;
 
         public CustomLandParcelSettings(IMod mod)
             : base(mod)
         {
         }
 
-        public bool EnableVanillaMapTileCompatibility { get; set; }
+        public bool EnableVanillaMapTileCompatibility { get; set; } = DefaultEnableVanillaMapTileCompatibility;
+
+        public bool ShowVanillaUnlockedMapTileBorders { get; set; } = DefaultShowVanillaUnlockedMapTileBorders;
 
         [SettingsUIKeyboardBinding(BindingKeyboard.B, ToggleEditModeAction, alt: true, ctrl: true)]
         public ProxyBinding ToggleEditMode { get; set; }
@@ -47,6 +50,7 @@ namespace CustomLandParcel
         public override void SetDefaults()
         {
             EnableVanillaMapTileCompatibility = DefaultEnableVanillaMapTileCompatibility;
+            ShowVanillaUnlockedMapTileBorders = DefaultShowVanillaUnlockedMapTileBorders;
         }
     }
 }

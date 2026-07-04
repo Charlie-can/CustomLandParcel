@@ -65,19 +65,19 @@ namespace CustomLandParcel.Geometry
 
         private static float CalculateOwnershipFactor(IReadOnlyList<LandParcel> allParcels)
         {
-            var purchasedCount = 0;
+            var activeCount = 0;
             if (allParcels != null)
             {
                 for (var i = 0; i < allParcels.Count; i++)
                 {
-                    if (allParcels[i].IsPurchased)
+                    if (allParcels[i].IsBuildable)
                     {
-                        purchasedCount++;
+                        activeCount++;
                     }
                 }
             }
 
-            return 1f + Math.Max(0, purchasedCount) * OwnershipStep;
+            return 1f + Math.Max(0, activeCount) * OwnershipStep;
         }
     }
 }

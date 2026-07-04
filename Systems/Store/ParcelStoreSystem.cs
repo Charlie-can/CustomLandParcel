@@ -76,11 +76,6 @@ namespace CustomLandParcel.Systems
             return Store.RenameSelectedParcel(name, reason);
         }
 
-        internal bool PurchaseSelectedParcel(string reason)
-        {
-            return Store.PurchaseSelectedParcel(reason);
-        }
-
         internal bool SetSelectedParcelState(LandParcelState state, string reason)
         {
             return Store.SetSelectedParcelState(state, reason);
@@ -156,9 +151,9 @@ namespace CustomLandParcel.Systems
             return Store.IsBuildable(position);
         }
 
-        internal bool TryGetContainingPurchasedParcel(float2 position, out LandParcel parcel)
+        internal bool TryGetContainingBuildableParcel(float2 position, out LandParcel parcel)
         {
-            return Store.TryGetContainingPurchasedParcel(position, out parcel);
+            return Store.TryGetContainingBuildableParcel(position, out parcel);
         }
 
         internal bool TryGetActiveUnionBounds(out float2 min, out float2 max)
@@ -166,9 +161,14 @@ namespace CustomLandParcel.Systems
             return Store.TryGetActiveUnionBounds(out min, out max);
         }
 
-        internal bool TryGetPurchasedUnionBounds(out float2 min, out float2 max)
+        internal bool TryGetBuildableUnionBounds(out float2 min, out float2 max)
         {
-            return Store.TryGetPurchasedUnionBounds(out min, out max);
+            return Store.TryGetBuildableUnionBounds(out min, out max);
+        }
+
+        internal bool TryAlignDefaultParcelToBounds(float2 min, float2 max, string reason)
+        {
+            return Store.TryAlignDefaultParcelToBounds(min, max, reason);
         }
 
         internal string GetSummary()

@@ -17,7 +17,6 @@ namespace CustomLandParcel.Systems
     {
         private const string Group = "customLandParcel";
         private ParcelStoreSystem _mParcelStoreSystem;
-        private ParcelPurchaseSystem _mParcelPurchaseSystem;
         private ParcelEditToolSystem _mParcelEditToolSystem;
         private RawValueBinding _mParcelsBinding;
         private uint _mLastLoggedVersion;
@@ -29,7 +28,6 @@ namespace CustomLandParcel.Systems
         {
             base.OnCreate();
             _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
-            _mParcelPurchaseSystem = World.GetOrCreateSystemManaged<ParcelPurchaseSystem>();
             _mParcelEditToolSystem = World.GetOrCreateSystemManaged<ParcelEditToolSystem>();
 
             AddUpdateBinding(_mParcelsBinding = new RawValueBinding(Group, "parcels", BindParcels));
@@ -61,7 +59,6 @@ namespace CustomLandParcel.Systems
             AddBinding(new TriggerBinding<string>(Group, "renameSelectedParcel", RenameSelectedParcel));
             AddBinding(new TriggerBinding(Group, "deleteSelectedParcel", DeleteSelectedParcel));
             AddBinding(new TriggerBinding<string>(Group, "mergeSelectedParcelWith", MergeSelectedParcelWith));
-            AddBinding(new TriggerBinding(Group, "purchaseSelectedParcel", PurchaseSelectedParcel));
             AddBinding(new TriggerBinding<bool>(Group, "setParcelEditToolActive", SetParcelEditToolActive));
             AddBinding(new TriggerBinding<float2>(Group, "moveSelectedParcel", MoveSelectedParcel));
             AddBinding(new TriggerBinding<float2>(Group, "moveSelectedVertex", MoveSelectedVertex));
@@ -146,12 +143,6 @@ namespace CustomLandParcel.Systems
 
             _mParcelStoreSystem.MergeSelectedParcelWith(id, "ui mergeSelectedParcelWith");
             LogTrigger($"mergeSelectedParcelWith id={idText}");
-        }
-
-        private void PurchaseSelectedParcel()
-        {
-            _mParcelPurchaseSystem.PurchaseSelectedParcel("ui purchaseSelectedParcel");
-            LogTrigger("purchaseSelectedParcel");
         }
 
         private void SetParcelEditToolActive(bool active)

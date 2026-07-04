@@ -307,7 +307,7 @@ namespace CustomLandParcel.Systems
             var parcel = _mParcelStoreSystem.CreatePolygon(
                 $"Parcel {_mParcelStoreSystem.Parcels.Count + 1}",
                 Session.DraftPoints.ToArray(),
-                LandParcelState.Available,
+                LandParcelState.Purchased,
                 reason);
             Session.ClearDraft();
             Mod.log.Info(

@@ -31,7 +31,7 @@ namespace CustomLandParcel.Data
 
         public List<float2> Points { get; }
 
-        public bool IsPurchased => State == LandParcelState.Purchased;
+        public bool IsBuildable => State != LandParcelState.Locked;
 
         public override string ToString()
         {

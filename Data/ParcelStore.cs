@@ -40,6 +40,7 @@ namespace CustomLandParcel.Data
         public LandParcel CreateRectangle(string name, float2 center, float2 size, string reason)
         {
             var parcel = ParcelGeometry.CreateRectangle(name, center, size);
+            parcel.State = LandParcelState.Purchased;
             _mParcels.Add(parcel);
             RepriceParcel(parcel, $"{reason}: create rectangle");
             _mSelection = new ParcelSelection(parcel.Id, 0);
@@ -106,7 +107,7 @@ namespace CustomLandParcel.Data
             var previousSelected = selected.ToString();
             var previousTarget = target.ToString();
             selected.Name = $"{selected.Name} + {target.Name}";
-            selected.State = selected.IsPurchased && target.IsPurchased ? LandParcelState.Purchased : LandParcelState.Available;
+            selected.State = selected.IsBuildable && target.IsBuildable ? LandParcelState.Purchased : LandParcelState.Locked;
             selected.Points.Clear();
             selected.Points.AddRange(mergedPoints);
             _mParcels.Remove(target);
@@ -158,11 +159,6 @@ namespace CustomLandParcel.Data
             selected.Name = string.IsNullOrWhiteSpace(name) ? selected.Name : name.Trim();
             MarkChanged($"{reason}: renamed parcel {FormatGuid(selected.Id)} from '{previous}' to '{selected.Name}'");
             return true;
-        }
-
-        public bool PurchaseSelectedParcel(string reason)
-        {
-            return SetSelectedParcelState(LandParcelState.Purchased, reason);
         }
 
         public bool SetSelectedParcelState(LandParcelState state, string reason)
@@ -421,15 +417,15 @@ namespace CustomLandParcel.Data
 
         public bool IsBuildable(float2 position)
         {
-            return TryGetContainingPurchasedParcel(position, out _);
+            return TryGetContainingBuildableParcel(position, out _);
         }
 
-        public bool TryGetContainingPurchasedParcel(float2 position, out LandParcel parcel)
+        public bool TryGetContainingBuildableParcel(float2 position, out LandParcel parcel)
         {
             for (var i = 0; i < _mParcels.Count; i++)
             {
                 var candidate = _mParcels[i];
-                if (candidate.IsPurchased && PolygonMath.ContainsPoint(candidate.Points, position))
+                if (candidate.IsBuildable && PolygonMath.ContainsPoint(candidate.Points, position))
                 {
                     parcel = candidate;
                     return true;
@@ -442,13 +438,36 @@ namespace CustomLandParcel.Data
 
         public bool TryGetActiveUnionBounds(out float2 min, out float2 max)
         {
-            return ParcelGeometry.TryGetUnionBounds(_mParcels.Where(parcel => parcel.IsPurchased), out min, out max)
+            return ParcelGeometry.TryGetUnionBounds(_mParcels.Where(parcel => parcel.IsBuildable), out min, out max)
                    || ParcelGeometry.TryGetUnionBounds(_mParcels, out min, out max);
         }
 
-        public bool TryGetPurchasedUnionBounds(out float2 min, out float2 max)
+        public bool TryGetBuildableUnionBounds(out float2 min, out float2 max)
         {
-            return ParcelGeometry.TryGetUnionBounds(_mParcels.Where(parcel => parcel.IsPurchased), out min, out max);
+            return ParcelGeometry.TryGetUnionBounds(_mParcels.Where(parcel => parcel.IsBuildable), out min, out max);
+        }
+
+        public bool TryAlignDefaultParcelToBounds(float2 min, float2 max, string reason)
+        {
+            if (_mParcels.Count != 1)
+            {
+                return false;
+            }
+
+            var parcel = _mParcels[0];
+            if (!LooksLikeDefaultSeedParcel(parcel) || !math.all(max > min + ParcelGeometry.MinimumSize))
+            {
+                return false;
+            }
+
+            var previous = parcel.ToString();
+            parcel.Points.Clear();
+            parcel.Points.AddRange(CreateRectanglePoints(min, max));
+            parcel.State = LandParcelState.Purchased;
+            _mSelection = new ParcelSelection(parcel.Id, ClampVertexIndex(parcel, _mSelection.VertexIndex));
+            RepriceParcel(parcel, $"{reason}: align default parcel");
+            MarkChanged($"{reason}: aligned default parcel from {previous} to bounds {ParcelGeometry.Format(min)}..{ParcelGeometry.Format(max)}");
+            return true;
         }
 
         public void ReplaceFromSave(
@@ -483,9 +502,9 @@ namespace CustomLandParcel.Data
 
         public string GetSummary()
         {
-            var purchased = _mParcels.Count(parcel => parcel.IsPurchased);
+            var buildable = _mParcels.Count(parcel => parcel.IsBuildable);
             return
-                $"parcels={_mParcels.Count}, purchased={purchased}, selected={FormatGuid(_mSelection.ParcelId)}, vertex={_mSelection.VertexIndex}, version={_mVersion}";
+                $"parcels={_mParcels.Count}, buildable={buildable}, selected={FormatGuid(_mSelection.ParcelId)}, vertex={_mSelection.VertexIndex}, version={_mVersion}";
         }
 
         public static string FormatGuid(Guid id)
@@ -507,6 +526,37 @@ namespace CustomLandParcel.Data
             RepriceParcel(parcel, $"{reason}: seed default");
             _mSelection = new ParcelSelection(parcel.Id, 0);
             _mInfo($"{reason}: seeded default {parcel}.");
+        }
+
+        private static List<float2> CreateRectanglePoints(float2 min, float2 max)
+        {
+            return new List<float2>
+            {
+                new float2(min.x, min.y),
+                new float2(min.x, max.y),
+                new float2(max.x, max.y),
+                new float2(max.x, min.y)
+            };
+        }
+
+        private static bool LooksLikeDefaultSeedParcel(LandParcel parcel)
+        {
+            if (parcel == null || parcel.Points.Count != 4)
+            {
+                return false;
+            }
+
+            var half = ParcelGeometry.DefaultSize * 0.5f;
+            var expected = CreateRectanglePoints(ParcelGeometry.DefaultCenter - half, ParcelGeometry.DefaultCenter + half);
+            for (var i = 0; i < expected.Count; i++)
+            {
+                if (math.distancesq(parcel.Points[i], expected[i]) > 1f)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private void EnsureValidSelection(string reason)

@@ -13,7 +13,7 @@ using Unity.Mathematics;
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// Marks temporary construction previews outside purchased custom parcels and shows the vanilla city-limit error icon.
+    /// Marks temporary construction previews outside active custom parcels and shows the vanilla city-limit error icon.
     /// </summary>
     public partial class ConstructionRestrictionSystem : GameSystemBase
     {
@@ -77,7 +77,7 @@ namespace CustomLandParcel.Systems
                 _mLastIconCount = iconCount;
                 _mFramesSinceLog = 0;
                 Mod.log.Info(
-                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside purchased parcels; cityLimitIcons={iconCount}; iconPrefab={FormatEntity(_mExceedsCityLimitsPrefab)}. {_mParcelStoreSystem.GetSummary()}.");
+                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside active parcels; cityLimitIcons={iconCount}; iconPrefab={FormatEntity(_mExceedsCityLimitsPrefab)}. {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 
