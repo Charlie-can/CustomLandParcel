@@ -547,6 +547,16 @@ namespace CustomLandParcel.Compatibility
                         return true;
                     }
                 }
+
+                for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
+                {
+                    var a = parcel.Points[pointIndex];
+                    var b = parcel.Points[(pointIndex + 1) % parcel.Points.Count];
+                    if (SegmentIntersectsBounds(a, b, tileMin, tileMax))
+                    {
+                        return true;
+                    }
+                }
             }
 
             return false;
@@ -560,6 +570,57 @@ namespace CustomLandParcel.Compatibility
         private static bool PointInsideBounds(float2 point, float2 min, float2 max)
         {
             return math.all(point >= min) && math.all(point <= max);
+        }
+
+        private static bool SegmentIntersectsBounds(float2 start, float2 end, float2 min, float2 max)
+        {
+            if (PointInsideBounds(start, min, max) || PointInsideBounds(end, min, max))
+            {
+                return true;
+            }
+
+            var bottomLeft = new float2(min.x, min.y);
+            var topLeft = new float2(min.x, max.y);
+            var topRight = new float2(max.x, max.y);
+            var bottomRight = new float2(max.x, min.y);
+            return SegmentsIntersect(start, end, bottomLeft, topLeft)
+                   || SegmentsIntersect(start, end, topLeft, topRight)
+                   || SegmentsIntersect(start, end, topRight, bottomRight)
+                   || SegmentsIntersect(start, end, bottomRight, bottomLeft);
+        }
+
+        private static bool SegmentsIntersect(float2 a, float2 b, float2 c, float2 d)
+        {
+            const float epsilon = 0.001f;
+            var abC = Cross(a, b, c);
+            var abD = Cross(a, b, d);
+            var cdA = Cross(c, d, a);
+            var cdB = Cross(c, d, b);
+            if (((abC > epsilon && abD < -epsilon) || (abC < -epsilon && abD > epsilon)) &&
+                ((cdA > epsilon && cdB < -epsilon) || (cdA < -epsilon && cdB > epsilon)))
+            {
+                return true;
+            }
+
+            return math.abs(abC) <= epsilon && PointOnSegment(c, a, b)
+                   || math.abs(abD) <= epsilon && PointOnSegment(d, a, b)
+                   || math.abs(cdA) <= epsilon && PointOnSegment(a, c, d)
+                   || math.abs(cdB) <= epsilon && PointOnSegment(b, c, d);
+        }
+
+        private static bool PointOnSegment(float2 point, float2 start, float2 end)
+        {
+            return point.x >= math.min(start.x, end.x) - 0.001f
+                   && point.x <= math.max(start.x, end.x) + 0.001f
+                   && point.y >= math.min(start.y, end.y) - 0.001f
+                   && point.y <= math.max(start.y, end.y) + 0.001f;
+        }
+
+        private static float Cross(float2 origin, float2 a, float2 b)
+        {
+            var oa = a - origin;
+            var ob = b - origin;
+            return oa.x * ob.y - oa.y * ob.x;
         }
 
         private static Game.Areas.Geometry CreateGeometry(float2 min, float2 max)

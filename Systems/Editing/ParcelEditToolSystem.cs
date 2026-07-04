@@ -48,6 +48,7 @@ namespace CustomLandParcel.Systems
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            EnableToolActions();
             if (!TryGetCursorPosition(out var cursorPosition))
             {
                 if (Session.IsDrawing || Session.IsDragging)
@@ -80,6 +81,17 @@ namespace CustomLandParcel.Systems
             m_ToolRaycastSystem.collisionMask = CollisionMask.OnGround | CollisionMask.Overground;
             m_ToolRaycastSystem.netLayerMask = Layer.None;
             m_ToolRaycastSystem.areaTypeMask = AreaTypeMask.None;
+        }
+
+        private void EnableToolActions()
+        {
+            if (!applyAction.shouldBeEnabled || !cancelAction.shouldBeEnabled)
+            {
+                Mod.log.Info("Parcel edit tool enabled apply/cancel input actions for map editing.");
+            }
+
+            applyAction.shouldBeEnabled = true;
+            cancelAction.shouldBeEnabled = true;
         }
 
         internal void SetToolActive(bool active, string reason)
