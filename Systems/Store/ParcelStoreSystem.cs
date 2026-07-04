@@ -91,6 +91,11 @@ namespace CustomLandParcel.Systems
             return Store.MoveParcel(parcelId, delta, reason);
         }
 
+        internal bool MoveParcelTransient(Guid parcelId, float2 delta, string reason)
+        {
+            return Store.MoveParcelTransient(parcelId, delta, reason);
+        }
+
         internal bool ResizeSelectedParcel(float amount, string reason)
         {
             return Store.ResizeSelectedParcel(amount, reason);
@@ -109,6 +114,16 @@ namespace CustomLandParcel.Systems
         internal bool SetVertexPosition(Guid parcelId, int vertexIndex, float2 position, string reason)
         {
             return Store.SetVertexPosition(parcelId, vertexIndex, position, reason);
+        }
+
+        internal bool SetVertexPositionTransient(Guid parcelId, int vertexIndex, float2 position, string reason)
+        {
+            return Store.SetVertexPositionTransient(parcelId, vertexIndex, position, reason);
+        }
+
+        internal bool CommitParcelGeometry(Guid parcelId, string reason)
+        {
+            return Store.CommitParcelGeometry(parcelId, reason);
         }
 
         internal bool InsertVertexAfterSelected(string reason)

@@ -29,6 +29,14 @@ namespace CustomLandParcel.Systems
 
         public static ParcelEditHit None => new ParcelEditHit(ParcelEditHitKind.None, Guid.Empty, -1, -1, float.MaxValue);
 
+        public bool HasSameTarget(ParcelEditHit other)
+        {
+            return Kind == other.Kind
+                   && ParcelId == other.ParcelId
+                   && VertexIndex == other.VertexIndex
+                   && EdgeIndex == other.EdgeIndex;
+        }
+
         public override string ToString()
         {
             return

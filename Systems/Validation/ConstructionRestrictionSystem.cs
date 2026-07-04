@@ -26,6 +26,7 @@ namespace CustomLandParcel.Systems
         private int _mLastIconCount = -1;
         private int _mMissingPrefabLogCooldownFrames;
         private int _mFramesSinceLog;
+        private int _mNoPreviewLogCooldownFrames;
 
         protected override void OnCreate()
         {
@@ -52,6 +53,12 @@ namespace CustomLandParcel.Systems
 
         protected override void OnUpdate()
         {
+            if (_mObjectPreviewQuery.IsEmptyIgnoreFilter && _mCurvePreviewQuery.IsEmptyIgnoreFilter)
+            {
+                LogNoActivePreviews();
+                return;
+            }
+
             RefreshExceedsCityLimitsPrefab();
 
             var invalidCount = 0;
@@ -70,6 +77,21 @@ namespace CustomLandParcel.Systems
                 Mod.log.Info(
                     $"Parcel validation: {invalidCount} active construction preview entity/entities outside purchased parcels; cityLimitIcons={iconCount}; iconPrefab={FormatEntity(_mExceedsCityLimitsPrefab)}. {_mParcelStoreSystem.GetSummary()}.");
             }
+        }
+
+        private void LogNoActivePreviews()
+        {
+            _mLastInvalidCount = 0;
+            _mLastIconCount = 0;
+            _mFramesSinceLog = 0;
+            if (_mNoPreviewLogCooldownFrames > 0)
+            {
+                _mNoPreviewLogCooldownFrames--;
+                return;
+            }
+
+            Mod.log.Info($"Parcel validation idle: no active construction preview entities. {_mParcelStoreSystem.GetSummary()}.");
+            _mNoPreviewLogCooldownFrames = 300;
         }
 
         private int RestrictObjectPreviews(IconCommandBuffer iconCommandBuffer, ref int iconCount)

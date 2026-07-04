@@ -132,7 +132,7 @@ namespace CustomLandParcel.Systems
                 cursorPosition,
                 VertexHitRadius,
                 EdgeHitRadius);
-            if (hit.ToString() != Session.Hover.ToString())
+            if (!hit.HasSameTarget(Session.Hover))
             {
                 Mod.log.Info($"Parcel edit hover changed: {hit}.");
             }
@@ -201,7 +201,7 @@ namespace CustomLandParcel.Systems
             _mDragStarted = true;
             if (Session.DragTarget.Kind == ParcelEditHitKind.Vertex)
             {
-                _mParcelStoreSystem.SetVertexPosition(
+                _mParcelStoreSystem.SetVertexPositionTransient(
                     Session.DragTarget.ParcelId,
                     Session.DragTarget.VertexIndex,
                     cursorPosition,
@@ -212,7 +212,7 @@ namespace CustomLandParcel.Systems
             if (Session.DragTarget.Kind == ParcelEditHitKind.Parcel && Session.DragOriginalPoints.Count > 0)
             {
                 var frameDelta = cursorPosition - _mLastDragPosition;
-                _mParcelStoreSystem.MoveParcel(Session.DragTarget.ParcelId, frameDelta, "map drag parcel");
+                _mParcelStoreSystem.MoveParcelTransient(Session.DragTarget.ParcelId, frameDelta, "map drag parcel");
                 _mLastDragPosition = cursorPosition;
             }
         }
@@ -225,6 +225,7 @@ namespace CustomLandParcel.Systems
             {
                 if (_mDragStarted)
                 {
+                    _mParcelStoreSystem.CommitParcelGeometry(Session.DragTarget.ParcelId, "map drag end");
                     Mod.log.Info(
                         $"Parcel edit drag ended: target={Session.DragTarget}, delta={ParcelGeometry.Format(cursorPosition - _mPointerDownPosition)}, changed=True.");
                     Session.EndDrag();

@@ -17,12 +17,14 @@ namespace CustomLandParcel.Systems
     public partial class ParcelPlacementDiagnosticsSystem : GameSystemBase
     {
         private const int MaxSamples = 3;
+        private const int SampleIntervalFrames = 30;
         private EntityQuery _mObjectPreviewQuery;
         private EntityQuery _mCurvePreviewQuery;
         private ParcelStoreSystem _mParcelStoreSystem;
         private int _mLastOutsideCount = -1;
         private int _mLastOutsideErrorCount = -1;
         private int _mFramesSinceLog;
+        private int _mFramesUntilSample;
 
         protected override void OnCreate()
         {
@@ -45,6 +47,14 @@ namespace CustomLandParcel.Systems
 
         protected override void OnUpdate()
         {
+            if (_mFramesUntilSample > 0)
+            {
+                _mFramesUntilSample--;
+                return;
+            }
+
+            _mFramesUntilSample = SampleIntervalFrames;
+
             var diagnostics = new PlacementDiagnostics();
             CollectObjectDiagnostics(ref diagnostics);
             CollectCurveDiagnostics(ref diagnostics);

@@ -180,6 +180,24 @@ namespace CustomLandParcel.Data
             return true;
         }
 
+        public bool MoveParcelTransient(Guid parcelId, float2 delta, string reason)
+        {
+            var parcel = FindParcel(parcelId);
+            if (parcel == null)
+            {
+                _mWarn($"Transient parcel move ignored ({reason}): parcel={FormatGuid(parcelId)} was not found.");
+                return false;
+            }
+
+            for (var i = 0; i < parcel.Points.Count; i++)
+            {
+                parcel.Points[i] += delta;
+            }
+
+            _mSelection = new ParcelSelection(parcel.Id, ClampVertexIndex(parcel, _mSelection.VertexIndex));
+            return true;
+        }
+
         public bool ResizeSelectedParcel(float amount, string reason)
         {
             var selected = SelectedParcel;
@@ -260,6 +278,36 @@ namespace CustomLandParcel.Data
             RepriceParcel(selected, $"{reason}: set vertex");
             MarkChanged(
                 $"{reason}: set vertex={vertexIndex} from {ParcelGeometry.Format(previous)} to {ParcelGeometry.Format(position)}, parcel={selected}");
+            return true;
+        }
+
+        public bool SetVertexPositionTransient(Guid parcelId, int vertexIndex, float2 position, string reason)
+        {
+            var selected = FindParcel(parcelId);
+            if (selected == null || vertexIndex < 0 || vertexIndex >= selected.Points.Count)
+            {
+                _mWarn(
+                    $"Transient vertex set ignored ({reason}): parcel={FormatGuid(parcelId)}, vertex={vertexIndex}.");
+                return false;
+            }
+
+            selected.Points[vertexIndex] = position;
+            _mSelection = new ParcelSelection(selected.Id, vertexIndex);
+            return true;
+        }
+
+        public bool CommitParcelGeometry(Guid parcelId, string reason)
+        {
+            var parcel = FindParcel(parcelId);
+            if (parcel == null)
+            {
+                _mWarn($"Parcel geometry commit ignored ({reason}): parcel={FormatGuid(parcelId)} was not found.");
+                return false;
+            }
+
+            RepriceParcel(parcel, $"{reason}: commit geometry");
+            _mSelection = new ParcelSelection(parcel.Id, ClampVertexIndex(parcel, _mSelection.VertexIndex));
+            MarkChanged($"{reason}: committed geometry for {parcel}");
             return true;
         }
 
