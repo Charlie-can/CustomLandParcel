@@ -9,19 +9,21 @@ using UnityEngine;
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// Draws the MVP parcel through the game's overlay renderer so it is visible in the normal CS2 render pipeline.
+    /// Draws the current parcel through the game's overlay renderer so it is visible in the normal CS2 render pipeline.
     /// </summary>
     public partial class ParcelBoundaryRenderSystem : GameSystemBase
     {
         private OverlayRenderSystem _mOverlayRenderSystem;
+        private ParcelBoundsSystem _mParcelBoundsSystem;
         private int _mFramesUntilLog;
 
         protected override void OnCreate()
         {
             base.OnCreate();
             _mOverlayRenderSystem = World.GetOrCreateSystemManaged<OverlayRenderSystem>();
+            _mParcelBoundsSystem = World.GetOrCreateSystemManaged<ParcelBoundsSystem>();
             Mod.log.Info(
-                "ParcelBoundaryRenderSystem enabled. Drawing MVP parcel buildable area through OverlayRenderSystem.");
+                "ParcelBoundaryRenderSystem enabled. Drawing current parcel buildable area through OverlayRenderSystem.");
         }
 
         protected override void OnUpdate()
@@ -31,71 +33,78 @@ namespace CustomLandParcel.Systems
                 _mOverlayRenderSystem = World.GetOrCreateSystemManaged<OverlayRenderSystem>();
             }
 
+            if (_mParcelBoundsSystem == null)
+            {
+                _mParcelBoundsSystem = World.GetOrCreateSystemManaged<ParcelBoundsSystem>();
+            }
+
             var buffer = _mOverlayRenderSystem.GetBuffer(out var dependencies);
             dependencies.Complete();
 
-            var min = ConstructionRestrictionSystem.ParcelMin;
-            var max = ConstructionRestrictionSystem.ParcelMax;
-            DrawParcelBoundary(buffer, min, max);
+            var bounds = _mParcelBoundsSystem.Bounds;
+            DrawParcelBoundary(buffer, bounds);
             _mOverlayRenderSystem.AddBufferWriter(default(JobHandle));
 
             if (_mFramesUntilLog <= 0)
             {
                 Mod.log.Info(
-                    $"Parcel overlay marker submitted this frame: parcel={FormatFloat2(min)}..{FormatFloat2(max)}, subtle dashed boundary only.");
+                    $"Parcel overlay marker submitted this frame: parcel={bounds}, parcelVersion={_mParcelBoundsSystem.Version}, subtle dashed boundary only.");
                 _mFramesUntilLog = 300;
             }
 
             _mFramesUntilLog--;
         }
 
-        private static void DrawParcelBoundary(OverlayRenderSystem.Buffer buffer, float2 min, float2 max)
+        private static void DrawParcelBoundary(OverlayRenderSystem.Buffer buffer, ParcelBounds bounds)
         {
-            var outlineColor = new Color(0.86f, 0.95f, 1f, 0.78f);
-            var fillColor = new Color(0.86f, 0.95f, 1f, 0.58f);
+            var outlineColor = new Color(0.62f, 0.78f, 0.86f, 0.48f);
+            var fillColor = new Color(0.62f, 0.78f, 0.86f, 0.30f);
             const OverlayRenderSystem.StyleFlags style = OverlayRenderSystem.StyleFlags.Projected |
                                                            OverlayRenderSystem.StyleFlags.DepthFadeBelow;
+            const float width = 7f;
+            const float dashLength = 64f;
+            const float gapLength = 48f;
 
             DrawDashedSegment(
                 buffer,
                 outlineColor,
                 fillColor,
                 style,
-                new float2(min.x, min.y),
-                new float2(max.x, min.y),
-                12f,
-                64f,
-                42f);
+                new float2(bounds.Min.x, bounds.Min.y),
+                new float2(bounds.Max.x, bounds.Min.y),
+                width,
+                dashLength,
+                gapLength);
             DrawDashedSegment(
                 buffer,
                 outlineColor,
                 fillColor,
                 style,
-                new float2(max.x, min.y),
-                new float2(max.x, max.y),
-                12f,
-                64f,
-                42f);
+                new float2(bounds.Max.x, bounds.Min.y),
+                new float2(bounds.Max.x, bounds.Max.y),
+                width,
+                dashLength,
+                gapLength);
             DrawDashedSegment(
                 buffer,
                 outlineColor,
                 fillColor,
                 style,
-                new float2(max.x, max.y),
-                new float2(min.x, max.y),
-                12f,
-                64f,
-                42f);
+                new float2(bounds.Max.x, bounds.Max.y),
+                new float2(bounds.Min.x, bounds.Max.y),
+                width,
+                dashLength,
+                gapLength);
             DrawDashedSegment(
                 buffer,
                 outlineColor,
                 fillColor,
                 style,
-                new float2(min.x, max.y),
-                new float2(min.x, min.y),
-                12f,
-                64f,
-                42f);
+                new float2(bounds.Min.x, bounds.Max.y),
+                new float2(bounds.Min.x, bounds.Min.y),
+                width,
+                dashLength,
+                gapLength);
         }
 
         private static void DrawDashedSegment(
@@ -127,11 +136,6 @@ namespace CustomLandParcel.Systems
                 a = new float3(start.x, 0f, start.y),
                 b = new float3(end.x, 0f, end.y)
             };
-        }
-
-        private static string FormatFloat2(float2 value)
-        {
-            return $"({value.x:F1}, {value.y:F1})";
         }
     }
 }

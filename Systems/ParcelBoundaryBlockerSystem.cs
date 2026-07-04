@@ -11,7 +11,7 @@ using Unity.Mathematics;
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// Creates native MapTile-shaped blockers around the MVP parcel so vanilla validation raises ExceedsCityLimits.
+    /// Creates native MapTile-shaped blockers around the current parcel so vanilla validation raises ExceedsCityLimits.
     /// </summary>
     public partial class ParcelBoundaryBlockerSystem : GameSystemBase
     {
@@ -23,12 +23,15 @@ namespace CustomLandParcel.Systems
         private EntityQuery m_MapTileQuery;
         private EntityQuery m_BlockerQuery;
         private EntityQuery m_BlockerReadyQuery;
+        private ParcelBoundsSystem m_ParcelBoundsSystem;
         private bool m_Created;
+        private uint m_AppliedParcelVersion;
         private int m_VerificationFramesRemaining;
 
         protected override void OnCreate()
         {
             base.OnCreate();
+            m_ParcelBoundsSystem = World.GetOrCreateSystemManaged<ParcelBoundsSystem>();
             m_MapTilePrefabQuery = GetEntityQuery(
                 ComponentType.ReadOnly<MapTileData>(),
                 ComponentType.ReadOnly<AreaData>(),
@@ -53,18 +56,19 @@ namespace CustomLandParcel.Systems
 
         protected override void OnUpdate()
         {
-            if (m_Created)
+            var currentVersion = m_ParcelBoundsSystem.Version;
+            if (m_Created && m_AppliedParcelVersion == currentVersion)
             {
                 VerifyBlockersAfterCreation();
                 return;
             }
 
-            if (m_Created || m_MapTilePrefabQuery.IsEmptyIgnoreFilter || m_MapTileQuery.IsEmptyIgnoreFilter)
+            if (m_MapTilePrefabQuery.IsEmptyIgnoreFilter || m_MapTileQuery.IsEmptyIgnoreFilter)
             {
                 if (m_VerificationFramesRemaining == 0)
                 {
                     Mod.log.Info(
-                        $"Parcel blocker waiting: prefabQueryEmpty={m_MapTilePrefabQuery.IsEmptyIgnoreFilter}, mapTileQueryEmpty={m_MapTileQuery.IsEmptyIgnoreFilter}.");
+                        $"Parcel blocker waiting: prefabQueryEmpty={m_MapTilePrefabQuery.IsEmptyIgnoreFilter}, mapTileQueryEmpty={m_MapTileQuery.IsEmptyIgnoreFilter}, parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={currentVersion}.");
                     m_VerificationFramesRemaining = 120;
                 }
 
@@ -83,18 +87,19 @@ namespace CustomLandParcel.Systems
             try
             {
                 var prefab = prefabs[0];
+                var parcel = m_ParcelBoundsSystem.Bounds;
                 LogPrefabDiagnostics(prefab, prefabs.Length);
-                CreateBlockers(prefab, worldMin, worldMax);
+                CreateBlockers(prefab, worldMin, worldMax, parcel);
+                m_Created = true;
+                m_AppliedParcelVersion = currentVersion;
+                m_VerificationFramesRemaining = 120;
+                Mod.log.Info(
+                    $"Created vanilla MapTile-style blockers around parcel. World bounds x/z {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}; parcel {parcel}; parcelVersion={m_AppliedParcelVersion}.");
             }
             finally
             {
                 prefabs.Dispose();
             }
-
-            m_Created = true;
-            m_VerificationFramesRemaining = 120;
-            Mod.log.Info(
-                $"Created vanilla MapTile-style blockers around MVP parcel. World bounds x/z {FormatFloat2(worldMin)}..{FormatFloat2(worldMax)}; parcel {FormatFloat2(ConstructionRestrictionSystem.ParcelMin)}..{FormatFloat2(ConstructionRestrictionSystem.ParcelMax)}.");
         }
 
         private void ClearExistingBlockers()
@@ -102,9 +107,11 @@ namespace CustomLandParcel.Systems
             if (!m_BlockerQuery.IsEmptyIgnoreFilter)
             {
                 Mod.log.Info(
-                    $"Clearing {m_BlockerQuery.CalculateEntityCount()} existing parcel blocker entity/entities before recreation.");
+                    $"Clearing {m_BlockerQuery.CalculateEntityCount()} existing parcel blocker entity/entities before recreation. previousVersion={m_AppliedParcelVersion}, nextVersion={m_ParcelBoundsSystem.Version}.");
                 EntityManager.DestroyEntity(m_BlockerQuery);
             }
+
+            m_Created = false;
         }
 
         private bool TryGetWorldBounds(out float2 worldMin, out float2 worldMax)
@@ -134,7 +141,7 @@ namespace CustomLandParcel.Systems
                 }
 
                 Mod.log.Info(
-                    $"Parcel blocker world bounds source: {entities.Length} vanilla map tile entity/entities; x/z bounds {FormatFloat2(worldMin)}..{FormatFloat2(worldMax)}.");
+                    $"Parcel blocker world bounds source: {entities.Length} vanilla map tile entity/entities; x/z bounds {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}.");
                 return math.all(worldMin < worldMax);
             }
             finally
@@ -143,14 +150,12 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private void CreateBlockers(Entity prefab, float2 worldMin, float2 worldMax)
+        private void CreateBlockers(Entity prefab, float2 worldMin, float2 worldMax, ParcelBounds parcel)
         {
-            var parcelMin = ConstructionRestrictionSystem.ParcelMin;
-            var parcelMax = ConstructionRestrictionSystem.ParcelMax;
-            CreateBlocker(prefab, new float2(worldMin.x, worldMin.y), new float2(parcelMin.x, worldMax.y));
-            CreateBlocker(prefab, new float2(parcelMax.x, worldMin.y), new float2(worldMax.x, worldMax.y));
-            CreateBlocker(prefab, new float2(parcelMin.x, worldMin.y), new float2(parcelMax.x, parcelMin.y));
-            CreateBlocker(prefab, new float2(parcelMin.x, parcelMax.y), new float2(parcelMax.x, worldMax.y));
+            CreateBlocker(prefab, new float2(worldMin.x, worldMin.y), new float2(parcel.Min.x, worldMax.y));
+            CreateBlocker(prefab, new float2(parcel.Max.x, worldMin.y), new float2(worldMax.x, worldMax.y));
+            CreateBlocker(prefab, new float2(parcel.Min.x, worldMin.y), new float2(parcel.Max.x, parcel.Min.y));
+            CreateBlocker(prefab, new float2(parcel.Min.x, parcel.Max.y), new float2(parcel.Max.x, worldMax.y));
         }
 
         private void CreateBlocker(Entity prefab, float2 min, float2 max)
@@ -158,7 +163,7 @@ namespace CustomLandParcel.Systems
             if (math.any(max - min <= 1f))
             {
                 Mod.log.Warn(
-                    $"Skipped parcel blocker rectangle with invalid or tiny size: min={FormatFloat2(min)}, max={FormatFloat2(max)}.");
+                    $"Skipped parcel blocker rectangle with invalid or tiny size: min={ParcelBounds.Format(min)}, max={ParcelBounds.Format(max)}.");
                 return;
             }
 
@@ -190,7 +195,7 @@ namespace CustomLandParcel.Systems
             triangles[1] = new Triangle(0, 2, 3);
 
             Mod.log.Info(
-                $"Created parcel blocker entity {FormatEntity(entity)} rect min={FormatFloat2(min)}, max={FormatFloat2(max)}, area={(max.x - min.x) * (max.y - min.y):F0}, components=Area+Node+Triangle+Geometry+PrefabRef+Native+Updated.");
+                $"Created parcel blocker entity {FormatEntity(entity)} rect min={ParcelBounds.Format(min)}, max={ParcelBounds.Format(max)}, area={(max.x - min.x) * (max.y - min.y):F0}, components=Area+Node+Triangle+Geometry+PrefabRef+Native+Updated.");
         }
 
         private void LogPrefabDiagnostics(Entity prefab, int prefabCount)
@@ -218,7 +223,7 @@ namespace CustomLandParcel.Systems
                 m_VerificationFramesRemaining == 1)
             {
                 Mod.log.Info(
-                    $"Parcel blocker verification: totalMarked={m_BlockerQuery.CalculateEntityCount()}, readyForAreaSearch={m_BlockerReadyQuery.CalculateEntityCount()}, updatedStillPresent={CountBlockersWithUpdated()}.");
+                    $"Parcel blocker verification: totalMarked={m_BlockerQuery.CalculateEntityCount()}, readyForAreaSearch={m_BlockerReadyQuery.CalculateEntityCount()}, updatedStillPresent={CountBlockersWithUpdated()}, parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_AppliedParcelVersion}.");
             }
 
             m_VerificationFramesRemaining--;
@@ -260,11 +265,6 @@ namespace CustomLandParcel.Systems
         private static string FormatEntity(Entity entity)
         {
             return $"{entity.Index}:{entity.Version}";
-        }
-
-        private static string FormatFloat2(float2 value)
-        {
-            return $"({value.x:F1}, {value.y:F1})";
         }
     }
 }

@@ -24,8 +24,8 @@ namespace CustomLandParcel.Systems
         private int m_LastInvalidCount = -1;
         private int m_FramesSinceLog;
 
-        internal static readonly float2 ParcelMin = new float2(-500f, -500f);
-        internal static readonly float2 ParcelMax = new float2(500f, 500f);
+        internal static readonly float2 ParcelMin = ParcelBounds.Default.Min;
+        internal static readonly float2 ParcelMax = ParcelBounds.Default.Max;
 
         protected override void OnCreate()
         {

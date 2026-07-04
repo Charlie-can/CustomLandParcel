@@ -18,6 +18,7 @@ namespace CustomLandParcel.Systems
         private const int MaxSamples = 3;
         private EntityQuery m_ObjectPreviewQuery;
         private EntityQuery m_CurvePreviewQuery;
+        private ParcelBoundsSystem m_ParcelBoundsSystem;
         private int m_LastOutsideCount = -1;
         private int m_LastOutsideErrorCount = -1;
         private int m_FramesSinceLog;
@@ -25,6 +26,7 @@ namespace CustomLandParcel.Systems
         protected override void OnCreate()
         {
             base.OnCreate();
+            m_ParcelBoundsSystem = World.GetOrCreateSystemManaged<ParcelBoundsSystem>();
 
             m_ObjectPreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
@@ -37,7 +39,7 @@ namespace CustomLandParcel.Systems
                 ComponentType.Exclude<Deleted>());
 
             Mod.log.Info(
-                $"ParcelPlacementDiagnosticsSystem enabled. Parcel x/z {FormatFloat2(ConstructionRestrictionSystem.ParcelMin)}..{FormatFloat2(ConstructionRestrictionSystem.ParcelMax)}. Logging only active create/modify/replace/upgrade previews.");
+                $"ParcelPlacementDiagnosticsSystem enabled. Parcel x/z {m_ParcelBoundsSystem.Bounds}. Logging only active create/modify/replace/upgrade previews.");
         }
 
         protected override void OnUpdate()
@@ -62,12 +64,13 @@ namespace CustomLandParcel.Systems
 
             if (diagnostics.ActiveCount == 0)
             {
-                Mod.log.Info("Placement diagnostics: no active construction preview entities found this frame.");
+                Mod.log.Info(
+                    $"Placement diagnostics: no active construction preview entities found this frame. parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}.");
                 return;
             }
 
             Mod.log.Info(
-                $"Placement diagnostics: active={diagnostics.ActiveCount}, inside={diagnostics.InsideCount}, outside={diagnostics.OutsideCount}, outsideWithError={diagnostics.OutsideWithErrorCount}, outsideWithoutError={diagnostics.OutsideCount - diagnostics.OutsideWithErrorCount}, samples={diagnostics.Samples}.");
+                $"Placement diagnostics: active={diagnostics.ActiveCount}, inside={diagnostics.InsideCount}, outside={diagnostics.OutsideCount}, outsideWithError={diagnostics.OutsideWithErrorCount}, outsideWithoutError={diagnostics.OutsideCount - diagnostics.OutsideWithErrorCount}, parcel={m_ParcelBoundsSystem.Bounds}, parcelVersion={m_ParcelBoundsSystem.Version}, samples={diagnostics.Samples}.");
 
             if (diagnostics.OutsideCount > 0 && diagnostics.OutsideWithErrorCount == 0)
             {
@@ -140,7 +143,7 @@ namespace CustomLandParcel.Systems
             Temp temp)
         {
             diagnostics.ActiveCount++;
-            var inside = ConstructionRestrictionSystem.Contains(point);
+            var inside = m_ParcelBoundsSystem.Contains(point);
             if (inside)
             {
                 diagnostics.InsideCount++;
@@ -196,7 +199,7 @@ namespace CustomLandParcel.Systems
             diagnostics.Samples.Append(" entity=");
             diagnostics.Samples.Append(FormatEntity(entity));
             diagnostics.Samples.Append(" point=");
-            diagnostics.Samples.Append(FormatFloat2(samplePoint));
+            diagnostics.Samples.Append(ParcelBounds.Format(samplePoint));
             diagnostics.Samples.Append(" hasError=");
             diagnostics.Samples.Append(hasError);
             diagnostics.Samples.Append(" tempFlags=");
@@ -221,13 +224,13 @@ namespace CustomLandParcel.Systems
             return (temp.m_Flags & (TempFlags.Essential | TempFlags.IsLast)) != 0;
         }
 
-        private static bool CurveInsideParcel(Colossal.Mathematics.Bezier4x3 curve)
+        private bool CurveInsideParcel(Colossal.Mathematics.Bezier4x3 curve)
         {
             for (var i = 0; i <= 8; i++)
             {
                 var t = i / 8f;
                 var position = EvaluateBezier(curve, t);
-                if (!ConstructionRestrictionSystem.Contains(new float2(position.x, position.z)))
+                if (!m_ParcelBoundsSystem.Contains(new float2(position.x, position.z)))
                 {
                     return false;
                 }
@@ -248,11 +251,6 @@ namespace CustomLandParcel.Systems
         private static string FormatEntity(Entity entity)
         {
             return $"{entity.Index}:{entity.Version}";
-        }
-
-        private static string FormatFloat2(float2 value)
-        {
-            return $"({value.x:F1}, {value.y:F1})";
         }
 
         private sealed class PlacementDiagnostics

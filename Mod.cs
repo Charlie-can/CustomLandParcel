@@ -11,14 +11,24 @@ namespace CustomLandParcel
         public static ILog log = LogManager.GetLogger($"{nameof(CustomLandParcel)}.{nameof(Mod)}")
             .SetShowsErrorsInUI(false);
 
+        public static CustomLandParcelSettings Settings { get; private set; }
+
         public void OnLoad(UpdateSystem updateSystem)
         {
             log.Info(nameof(OnLoad));
+
+            Settings = new CustomLandParcelSettings(this);
+            Settings.RegisterInOptionsUI();
+            Settings.RegisterKeyBindings();
+            log.Info("Registered CustomLandParcel settings and keybindings in the game options UI.");
+
+            updateSystem.UpdateAt<ParcelBoundsSystem>(SystemUpdatePhase.Serialize);
+            updateSystem.UpdateAt<ParcelBoundaryControlSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelBoundaryBlockerSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelPlacementDiagnosticsSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
             log.Info(
-                "Registered ParcelBoundaryBlockerSystem and ParcelPlacementDiagnosticsSystem at PostTool, ParcelBoundaryRenderSystem at Rendering.");
+                "Registered ParcelBoundsSystem at Serialize, ParcelBoundaryControlSystem/ParcelBoundaryBlockerSystem/ParcelPlacementDiagnosticsSystem at PostTool, ParcelBoundaryRenderSystem at Rendering.");
 
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {
@@ -29,6 +39,8 @@ namespace CustomLandParcel
         public void OnDispose()
         {
             log.Info(nameof(OnDispose));
+            Settings?.UnregisterInOptionsUI();
+            Settings = null;
         }
     }
 }
