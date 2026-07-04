@@ -89,7 +89,7 @@ namespace CustomLandParcel.Systems
             {
                 for (var i = 0; i < entities.Length; i++)
                 {
-                    if (!ShouldValidate(temps[i]))
+                    if (!PlacementPreviewUtility.ShouldValidate(temps[i]))
                     {
                         continue;
                     }
@@ -117,13 +117,13 @@ namespace CustomLandParcel.Systems
             {
                 for (var i = 0; i < entities.Length; i++)
                 {
-                    if (!ShouldValidate(temps[i]))
+                    if (!PlacementPreviewUtility.ShouldValidate(temps[i]))
                     {
                         continue;
                     }
 
                     var curve = curves[i].m_Bezier;
-                    var center = EvaluateBezier(curve, 0.5f);
+                    var center = PlacementPreviewUtility.EvaluateBezier(curve, 0.5f);
                     AddCurveDiagnostics(ref diagnostics, entities[i], curve, new float2(center.x, center.z), temps[i]);
                 }
             }
@@ -161,7 +161,7 @@ namespace CustomLandParcel.Systems
             Temp temp)
         {
             diagnostics.ActiveCount++;
-            var inside = CurveInsideParcel(curve);
+            var inside = PlacementPreviewUtility.CurveInsideParcel(curve, m_ParcelStoreSystem);
             if (inside)
             {
                 diagnostics.InsideCount++;
@@ -199,53 +199,12 @@ namespace CustomLandParcel.Systems
             diagnostics.Samples.Append(" entity=");
             diagnostics.Samples.Append(FormatEntity(entity));
             diagnostics.Samples.Append(" point=");
-            diagnostics.Samples.Append(ParcelBounds.Format(samplePoint));
+            diagnostics.Samples.Append(CustomLandParcel.Geometry.ParcelGeometry.Format(samplePoint));
             diagnostics.Samples.Append(" hasError=");
             diagnostics.Samples.Append(hasError);
             diagnostics.Samples.Append(" tempFlags=");
             diagnostics.Samples.Append(temp.m_Flags);
             diagnostics.SampleCount++;
-        }
-
-        private static bool ShouldValidate(Temp temp)
-        {
-            const TempFlags applyFlags = TempFlags.Create | TempFlags.Modify | TempFlags.Replace | TempFlags.Upgrade;
-            if ((temp.m_Flags & applyFlags) == 0)
-            {
-                return false;
-            }
-
-            if ((temp.m_Flags & (TempFlags.Hidden | TempFlags.Delete | TempFlags.Cancel | TempFlags.Select |
-                                 TempFlags.Optional)) != 0)
-            {
-                return false;
-            }
-
-            return (temp.m_Flags & (TempFlags.Essential | TempFlags.IsLast)) != 0;
-        }
-
-        private bool CurveInsideParcel(Colossal.Mathematics.Bezier4x3 curve)
-        {
-            for (var i = 0; i <= 8; i++)
-            {
-                var t = i / 8f;
-                var position = EvaluateBezier(curve, t);
-                if (!m_ParcelStoreSystem.IsBuildable(new float2(position.x, position.z)))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private static float3 EvaluateBezier(Colossal.Mathematics.Bezier4x3 curve, float t)
-        {
-            var u = 1f - t;
-            return u * u * u * curve.a
-                   + 3f * u * u * t * curve.b
-                   + 3f * u * t * t * curve.c
-                   + t * t * t * curve.d;
         }
 
         private static string FormatEntity(Entity entity)

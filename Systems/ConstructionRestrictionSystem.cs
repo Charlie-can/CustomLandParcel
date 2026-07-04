@@ -71,7 +71,7 @@ namespace CustomLandParcel.Systems
                 {
                     var entity = entities[i];
                     var temp = temps[i];
-                    if (!ShouldValidate(temp))
+                    if (!PlacementPreviewUtility.ShouldValidate(temp))
                     {
                         ClearOwnError(entity);
                         continue;
@@ -110,14 +110,14 @@ namespace CustomLandParcel.Systems
                 {
                     var entity = entities[i];
                     var temp = temps[i];
-                    if (!ShouldValidate(temp))
+                    if (!PlacementPreviewUtility.ShouldValidate(temp))
                     {
                         ClearOwnError(entity);
                         continue;
                     }
 
                     var curve = curves[i].m_Bezier;
-                    var valid = CurveInsideParcel(curve);
+                    var valid = PlacementPreviewUtility.CurveInsideParcel(curve, m_ParcelStoreSystem);
                     SetRestrictionError(entity, !valid);
 
                     if (!valid)
@@ -134,23 +134,6 @@ namespace CustomLandParcel.Systems
                 temps.Dispose();
                 curves.Dispose();
             }
-        }
-
-        private static bool ShouldValidate(Temp temp)
-        {
-            const TempFlags applyFlags = TempFlags.Create | TempFlags.Modify | TempFlags.Replace | TempFlags.Upgrade;
-            if ((temp.m_Flags & applyFlags) == 0)
-            {
-                return false;
-            }
-
-            if ((temp.m_Flags & (TempFlags.Hidden | TempFlags.Delete | TempFlags.Cancel | TempFlags.Select |
-                                 TempFlags.Optional)) != 0)
-            {
-                return false;
-            }
-
-            return (temp.m_Flags & (TempFlags.Essential | TempFlags.IsLast)) != 0;
         }
 
         private void SetRestrictionError(Entity entity, bool blocked)
@@ -189,28 +172,5 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private bool CurveInsideParcel(Colossal.Mathematics.Bezier4x3 curve)
-        {
-            for (var i = 0; i <= 8; i++)
-            {
-                var t = i / 8f;
-                var position = EvaluateBezier(curve, t);
-                if (!m_ParcelStoreSystem.IsBuildable(new float2(position.x, position.z)))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private static float3 EvaluateBezier(Colossal.Mathematics.Bezier4x3 curve, float t)
-        {
-            var u = 1f - t;
-            return u * u * u * curve.a
-                   + 3f * u * u * t * curve.b
-                   + 3f * u * t * t * curve.c
-                   + t * t * t * curve.d;
-        }
     }
 }

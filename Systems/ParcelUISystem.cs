@@ -2,6 +2,7 @@ using System;
 using Colossal.Serialization.Entities;
 using Colossal.UI.Binding;
 using CustomLandParcel.Geometry;
+using CustomLandParcel.UI;
 using Game;
 using Game.SceneFlow;
 using Game.UI;
@@ -75,40 +76,7 @@ namespace CustomLandParcel.Systems
 
         private void BindParcels(IJsonWriter writer)
         {
-            writer.ArrayBegin((uint)_parcelStoreSystem.Parcels.Count);
-            for (var i = 0; i < _parcelStoreSystem.Parcels.Count; i++)
-            {
-                var parcel = _parcelStoreSystem.Parcels[i];
-                PolygonMath.TryGetBounds(parcel.Points, out var min, out var max);
-                writer.TypeBegin("customLandParcel.Parcel");
-                writer.PropertyName("id");
-                writer.Write(parcel.Id.ToString("N"));
-                writer.PropertyName("name");
-                writer.Write(parcel.Name);
-                writer.PropertyName("state");
-                writer.Write(parcel.State.ToString());
-                writer.PropertyName("price");
-                writer.Write(parcel.Price);
-                writer.PropertyName("area");
-                writer.Write(PolygonMath.Area(parcel.Points));
-                writer.PropertyName("selected");
-                writer.Write(parcel.Id == _parcelStoreSystem.SelectedParcelId);
-                writer.PropertyName("min");
-                writer.Write(min);
-                writer.PropertyName("max");
-                writer.Write(max);
-                writer.PropertyName("points");
-                writer.ArrayBegin((uint)parcel.Points.Count);
-                for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
-                {
-                    writer.Write(parcel.Points[pointIndex]);
-                }
-
-                writer.ArrayEnd();
-                writer.TypeEnd();
-            }
-
-            writer.ArrayEnd();
+            ParcelUIWriter.WriteParcels(writer, _parcelStoreSystem.Store);
         }
 
         private void AddRectangle()
@@ -167,13 +135,13 @@ namespace CustomLandParcel.Systems
         private void MoveSelectedParcel(float2 delta)
         {
             _parcelStoreSystem.MoveSelectedParcel(delta, "ui moveSelectedParcel");
-            LogTrigger($"moveSelectedParcel delta={ParcelBounds.Format(delta)}");
+            LogTrigger($"moveSelectedParcel delta={ParcelGeometry.Format(delta)}");
         }
 
         private void MoveSelectedVertex(float2 delta)
         {
             _parcelStoreSystem.MoveSelectedVertex(delta, "ui moveSelectedVertex");
-            LogTrigger($"moveSelectedVertex delta={ParcelBounds.Format(delta)}");
+            LogTrigger($"moveSelectedVertex delta={ParcelGeometry.Format(delta)}");
         }
 
         private void InsertVertexAfterSelected()

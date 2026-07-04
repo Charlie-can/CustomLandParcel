@@ -4,20 +4,23 @@ using Game.Common;
 using Game.Prefabs;
 using Game.Tools;
 using Colossal.Mathematics;
+using CustomLandParcel.Geometry;
+using CustomLandParcel.Systems;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace CustomLandParcel.Systems
+namespace CustomLandParcel.Compatibility
 {
     /// <summary>
-    /// Creates native MapTile-shaped blockers around active parcel union bounds so vanilla validation raises ExceedsCityLimits.
+    /// Compatibility layer that creates native MapTile-shaped blockers around active parcel union bounds.
+    /// The game then uses its own area validation path to raise city-limit style errors outside parcels.
     /// </summary>
-    public partial class ParcelBoundaryBlockerSystem : GameSystemBase
+    public partial class VanillaMapTileBlockerSystem : GameSystemBase
     {
         private const int RebuildDelayFrames = 20;
 
-        public struct ParcelBoundaryBlocker : IComponentData
+        public struct VanillaMapTileBlocker : IComponentData
         {
         }
 
@@ -45,17 +48,17 @@ namespace CustomLandParcel.Systems
                 ComponentType.ReadOnly<Node>(),
                 ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<Temp>(),
-                ComponentType.Exclude<ParcelBoundaryBlocker>());
-            m_BlockerQuery = GetEntityQuery(ComponentType.ReadOnly<ParcelBoundaryBlocker>());
+                ComponentType.Exclude<VanillaMapTileBlocker>());
+            m_BlockerQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileBlocker>());
             m_BlockerReadyQuery = GetEntityQuery(
-                ComponentType.ReadOnly<ParcelBoundaryBlocker>(),
+                ComponentType.ReadOnly<VanillaMapTileBlocker>(),
                 ComponentType.ReadOnly<Area>(),
                 ComponentType.ReadOnly<Node>(),
                 ComponentType.ReadOnly<Triangle>(),
                 ComponentType.ReadOnly<Game.Areas.Geometry>(),
                 ComponentType.ReadOnly<PrefabRef>(),
                 ComponentType.ReadOnly<Native>());
-            Mod.log.Info("ParcelBoundaryBlockerSystem enabled. Waiting for map tile prefab and map tile entities.");
+            Mod.log.Info("VanillaMapTileBlockerSystem enabled as compatibility layer. Waiting for map tile prefab and map tile entities.");
         }
 
         protected override void OnUpdate()
@@ -108,7 +111,7 @@ namespace CustomLandParcel.Systems
                 m_RebuildDelayFramesRemaining = 0;
                 m_VerificationFramesRemaining = 120;
                 Mod.log.Info(
-                    $"Applied vanilla MapTile-style blockers around active parcel union. World bounds x/z {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}; activeParcelBounds={ParcelBounds.Format(parcelMin)}..{ParcelBounds.Format(parcelMax)}; {m_ParcelStoreSystem.GetSummary()}.");
+                    $"Applied vanilla MapTile-style blockers around active parcel union. World bounds x/z {ParcelGeometry.Format(worldMin)}..{ParcelGeometry.Format(worldMax)}; activeParcelBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}; {m_ParcelStoreSystem.GetSummary()}.");
             }
             finally
             {
@@ -163,7 +166,7 @@ namespace CustomLandParcel.Systems
                 }
 
                 Mod.log.Info(
-                    $"Parcel blocker world bounds source: {entities.Length} vanilla map tile entity/entities; x/z bounds {ParcelBounds.Format(worldMin)}..{ParcelBounds.Format(worldMax)}.");
+                    $"Parcel blocker world bounds source: {entities.Length} vanilla map tile entity/entities; x/z bounds {ParcelGeometry.Format(worldMin)}..{ParcelGeometry.Format(worldMax)}.");
                 return math.all(worldMin < worldMax);
             }
             finally
@@ -195,7 +198,7 @@ namespace CustomLandParcel.Systems
             if (math.any(max - min <= 1f))
             {
                 Mod.log.Warn(
-                    $"Skipped parcel blocker rectangle with invalid or tiny size: min={ParcelBounds.Format(min)}, max={ParcelBounds.Format(max)}.");
+                    $"Skipped parcel blocker rectangle with invalid or tiny size: min={ParcelGeometry.Format(min)}, max={ParcelGeometry.Format(max)}.");
                 return;
             }
 
@@ -211,9 +214,9 @@ namespace CustomLandParcel.Systems
                 EntityManager.AddComponentData(entity, default(Native));
             }
 
-            if (!EntityManager.HasComponent<ParcelBoundaryBlocker>(entity))
+            if (!EntityManager.HasComponent<VanillaMapTileBlocker>(entity))
             {
-                EntityManager.AddComponentData(entity, default(ParcelBoundaryBlocker));
+                EntityManager.AddComponentData(entity, default(VanillaMapTileBlocker));
             }
 
             if (!EntityManager.HasComponent<Updated>(entity))
@@ -234,7 +237,7 @@ namespace CustomLandParcel.Systems
             triangles[1] = new Triangle(0, 2, 3);
 
             Mod.log.Info(
-                $"{(created ? "Created" : "Updated")} parcel blocker entity {FormatEntity(entity)} rect min={ParcelBounds.Format(min)}, max={ParcelBounds.Format(max)}, area={(max.x - min.x) * (max.y - min.y):F0}, components=Area+Node+Triangle+Geometry+PrefabRef+Native+Updated.");
+                $"{(created ? "Created" : "Updated")} parcel blocker entity {FormatEntity(entity)} rect min={ParcelGeometry.Format(min)}, max={ParcelGeometry.Format(max)}, area={(max.x - min.x) * (max.y - min.y):F0}, components=Area+Node+Triangle+Geometry+PrefabRef+Native+Updated.");
         }
 
         private void UpsertComponent<T>(Entity entity, T value) where T : unmanaged, IComponentData
