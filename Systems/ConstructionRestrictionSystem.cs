@@ -1,7 +1,9 @@
-﻿using Game;
+using Game;
 using Game.Common;
 using Game.Net;
+using Game.Notifications;
 using Game.Objects;
+using Game.Prefabs;
 using Game.Tools;
 using Unity.Collections;
 using Unity.Entities;
@@ -10,7 +12,7 @@ using Unity.Mathematics;
 namespace CustomLandParcel.Systems
 {
     /// <summary>
-    /// Marks temporary construction previews outside purchased custom parcels with the vanilla Error marker.
+    /// Marks temporary construction previews outside purchased custom parcels and shows the vanilla city-limit error icon.
     /// </summary>
     public partial class ConstructionRestrictionSystem : GameSystemBase
     {
@@ -20,14 +22,20 @@ namespace CustomLandParcel.Systems
 
         private EntityQuery _mObjectPreviewQuery;
         private EntityQuery _mCurvePreviewQuery;
+        private EntityQuery _mToolErrorPrefabQuery;
         private ParcelStoreSystem _mParcelStoreSystem;
+        private IconCommandSystem _mIconCommandSystem;
+        private Entity _mExceedsCityLimitsPrefab;
         private int _mLastInvalidCount = -1;
+        private int _mLastIconCount = -1;
+        private int _mMissingPrefabLogCooldownFrames;
         private int _mFramesSinceLog;
 
         protected override void OnCreate()
         {
             base.OnCreate();
             _mParcelStoreSystem = World.GetOrCreateSystemManaged<ParcelStoreSystem>();
+            _mIconCommandSystem = World.GetOrCreateSystemManaged<IconCommandSystem>();
 
             _mObjectPreviewQuery = GetEntityQuery(
                 ComponentType.ReadOnly<Temp>(),
@@ -39,26 +47,36 @@ namespace CustomLandParcel.Systems
                 ComponentType.ReadOnly<Curve>(),
                 ComponentType.Exclude<Deleted>());
 
+            _mToolErrorPrefabQuery = GetEntityQuery(
+                ComponentType.ReadOnly<NotificationIconData>(),
+                ComponentType.ReadOnly<ToolErrorData>());
+
             Mod.log.Info($"ConstructionRestrictionSystem enabled. {_mParcelStoreSystem.GetSummary()}.");
         }
 
         protected override void OnUpdate()
         {
+            RefreshExceedsCityLimitsPrefab();
+
             var invalidCount = 0;
-            invalidCount += RestrictObjectPreviews();
-            invalidCount += RestrictCurvePreviews();
+            var iconCount = 0;
+            var iconCommandBuffer = _mIconCommandSystem.CreateCommandBuffer();
+            invalidCount += RestrictObjectPreviews(iconCommandBuffer, ref iconCount);
+            invalidCount += RestrictCurvePreviews(iconCommandBuffer, ref iconCount);
 
             _mFramesSinceLog++;
-            if (invalidCount != _mLastInvalidCount && (invalidCount == 0 || _mFramesSinceLog >= 30))
+            if ((invalidCount != _mLastInvalidCount || iconCount != _mLastIconCount) &&
+                (invalidCount == 0 || _mFramesSinceLog >= 30))
             {
                 _mLastInvalidCount = invalidCount;
+                _mLastIconCount = iconCount;
                 _mFramesSinceLog = 0;
                 Mod.log.Info(
-                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside purchased parcels. {_mParcelStoreSystem.GetSummary()}.");
+                    $"Parcel validation: {invalidCount} active construction preview entity/entities outside purchased parcels; cityLimitIcons={iconCount}; iconPrefab={FormatEntity(_mExceedsCityLimitsPrefab)}. {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 
-        private int RestrictObjectPreviews()
+        private int RestrictObjectPreviews(IconCommandBuffer iconCommandBuffer, ref int iconCount)
         {
             var entities = _mObjectPreviewQuery.ToEntityArray(Allocator.Temp);
             var temps = _mObjectPreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
@@ -73,13 +91,13 @@ namespace CustomLandParcel.Systems
                     var temp = temps[i];
                     if (!PlacementPreviewUtility.ShouldValidate(temp))
                     {
-                        ClearOwnError(entity);
+                        ClearOwnError(entity, iconCommandBuffer);
                         continue;
                     }
 
                     var position = transforms[i].m_Position;
                     var valid = _mParcelStoreSystem.IsBuildable(new float2(position.x, position.z));
-                    SetRestrictionError(entity, !valid);
+                    SetRestrictionError(entity, !valid, position, iconCommandBuffer, ref iconCount);
 
                     if (!valid)
                     {
@@ -97,7 +115,7 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private int RestrictCurvePreviews()
+        private int RestrictCurvePreviews(IconCommandBuffer iconCommandBuffer, ref int iconCount)
         {
             var entities = _mCurvePreviewQuery.ToEntityArray(Allocator.Temp);
             var temps = _mCurvePreviewQuery.ToComponentDataArray<Temp>(Allocator.Temp);
@@ -112,13 +130,14 @@ namespace CustomLandParcel.Systems
                     var temp = temps[i];
                     if (!PlacementPreviewUtility.ShouldValidate(temp))
                     {
-                        ClearOwnError(entity);
+                        ClearOwnError(entity, iconCommandBuffer);
                         continue;
                     }
 
                     var curve = curves[i].m_Bezier;
                     var valid = PlacementPreviewUtility.CurveInsideParcel(curve, _mParcelStoreSystem);
-                    SetRestrictionError(entity, !valid);
+                    var iconPosition = PlacementPreviewUtility.EvaluateBezier(curve, 0.5f);
+                    SetRestrictionError(entity, !valid, iconPosition, iconCommandBuffer, ref iconCount);
 
                     if (!valid)
                     {
@@ -136,7 +155,12 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private void SetRestrictionError(Entity entity, bool blocked)
+        private void SetRestrictionError(
+            Entity entity,
+            bool blocked,
+            float3 iconPosition,
+            IconCommandBuffer iconCommandBuffer,
+            ref int iconCount)
         {
             var hasOwnError = EntityManager.HasComponent<ParcelRestrictionError>(entity);
 
@@ -151,14 +175,16 @@ namespace CustomLandParcel.Systems
                 {
                     EntityManager.AddComponent<ParcelRestrictionError>(entity);
                 }
+
+                AddCityLimitIcon(entity, iconPosition, iconCommandBuffer, ref iconCount);
             }
             else if (hasOwnError)
             {
-                ClearOwnError(entity);
+                ClearOwnError(entity, iconCommandBuffer);
             }
         }
 
-        private void ClearOwnError(Entity entity)
+        private void ClearOwnError(Entity entity, IconCommandBuffer iconCommandBuffer)
         {
             if (!EntityManager.Exists(entity) || !EntityManager.HasComponent<ParcelRestrictionError>(entity))
             {
@@ -170,6 +196,83 @@ namespace CustomLandParcel.Systems
             {
                 EntityManager.RemoveComponent<Error>(entity);
             }
+
+            if (_mExceedsCityLimitsPrefab != Entity.Null)
+            {
+                iconCommandBuffer.Remove(entity, _mExceedsCityLimitsPrefab);
+            }
+        }
+
+        private void AddCityLimitIcon(
+            Entity entity,
+            float3 iconPosition,
+            IconCommandBuffer iconCommandBuffer,
+            ref int iconCount)
+        {
+            if (_mExceedsCityLimitsPrefab == Entity.Null)
+            {
+                if (_mMissingPrefabLogCooldownFrames <= 0)
+                {
+                    Mod.log.Warn(
+                        "Parcel validation blocked an outside preview, but no ToolErrorData prefab for ErrorType.ExceedsCityLimits is available yet. The Error marker will block construction, but the vanilla city-limit tooltip cannot be shown.");
+                    _mMissingPrefabLogCooldownFrames = 120;
+                }
+                else
+                {
+                    _mMissingPrefabLogCooldownFrames--;
+                }
+
+                return;
+            }
+
+            iconCommandBuffer.Add(
+                entity,
+                _mExceedsCityLimitsPrefab,
+                iconPosition,
+                IconPriority.Error,
+                IconClusterLayer.Default,
+                IconFlags.IgnoreTarget,
+                Entity.Null,
+                isTemp: true,
+                disallowCluster: true);
+            iconCount++;
+        }
+
+        private void RefreshExceedsCityLimitsPrefab()
+        {
+            if (_mExceedsCityLimitsPrefab != Entity.Null && EntityManager.Exists(_mExceedsCityLimitsPrefab))
+            {
+                return;
+            }
+
+            _mExceedsCityLimitsPrefab = Entity.Null;
+            var entities = _mToolErrorPrefabQuery.ToEntityArray(Allocator.Temp);
+            var toolErrors = _mToolErrorPrefabQuery.ToComponentDataArray<ToolErrorData>(Allocator.Temp);
+            try
+            {
+                for (var i = 0; i < entities.Length; i++)
+                {
+                    if (toolErrors[i].m_Error != ErrorType.ExceedsCityLimits)
+                    {
+                        continue;
+                    }
+
+                    _mExceedsCityLimitsPrefab = entities[i];
+                    Mod.log.Info(
+                        $"Parcel validation selected vanilla ExceedsCityLimits error prefab {FormatEntity(_mExceedsCityLimitsPrefab)} from {entities.Length} ToolErrorData prefab(s).");
+                    return;
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+                toolErrors.Dispose();
+            }
+        }
+
+        private static string FormatEntity(Entity entity)
+        {
+            return entity == Entity.Null ? "null" : $"{entity.Index}:{entity.Version}";
         }
     }
 }
