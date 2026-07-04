@@ -4,6 +4,7 @@ using System.IO;
 using Colossal.Localization;
 using Game.SceneFlow;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace CustomLandParcel
 {
@@ -119,13 +120,45 @@ namespace CustomLandParcel
 
         private static string GetLocalizationPath(string localeId)
         {
-            var assemblyDirectory = Path.GetDirectoryName(typeof(CustomLandParcelLocalization).Assembly.Location);
-            if (string.IsNullOrEmpty(assemblyDirectory))
+            var fileName = localeId + ".json";
+            var candidates = new[]
             {
-                assemblyDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                TryGetAssemblyDirectory(),
+                Path.Combine(Application.persistentDataPath, "Mods", nameof(CustomLandParcel)),
+                AppDomain.CurrentDomain.BaseDirectory
+            };
+
+            for (var i = 0; i < candidates.Length; i++)
+            {
+                var directory = candidates[i];
+                if (string.IsNullOrEmpty(directory))
+                {
+                    continue;
+                }
+
+                var path = Path.Combine(directory, LocalizationDirectoryName, fileName);
+                if (File.Exists(path))
+                {
+                    return path;
+                }
             }
 
-            return Path.Combine(assemblyDirectory, LocalizationDirectoryName, localeId + ".json");
+            return Path.Combine(Application.persistentDataPath, "Mods", nameof(CustomLandParcel),
+                LocalizationDirectoryName, fileName);
+        }
+
+        private static string TryGetAssemblyDirectory()
+        {
+            try
+            {
+                var location = typeof(CustomLandParcelLocalization).Assembly.Location;
+                return string.IsNullOrEmpty(location) ? null : Path.GetDirectoryName(location);
+            }
+            catch (Exception exception)
+            {
+                Mod.log.Warn(exception, "Could not resolve CustomLandParcel assembly directory for localization lookup.");
+                return null;
+            }
         }
 
         private static string ResolveKey(CustomLandParcelSettings settings, string key)
