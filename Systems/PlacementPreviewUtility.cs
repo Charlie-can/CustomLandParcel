@@ -10,14 +10,14 @@ namespace CustomLandParcel.Systems
 
         public static bool ShouldValidate(Temp temp)
         {
-            const TempFlags applyFlags = TempFlags.Create | TempFlags.Modify | TempFlags.Replace | TempFlags.Upgrade;
+            const TempFlags applyFlags = TempFlags.Create | TempFlags.Delete | TempFlags.Modify | TempFlags.Replace |
+                                         TempFlags.Upgrade;
             if ((temp.m_Flags & applyFlags) == 0)
             {
                 return false;
             }
 
-            if ((temp.m_Flags & (TempFlags.Hidden | TempFlags.Delete | TempFlags.Cancel | TempFlags.Select |
-                                 TempFlags.Optional)) != 0)
+            if ((temp.m_Flags & (TempFlags.Hidden | TempFlags.Cancel | TempFlags.Select | TempFlags.Optional)) != 0)
             {
                 return false;
             }
