@@ -3,7 +3,7 @@
   "@bindingMap": "自定义地块",
   "@sectionDescription": "编辑当前存档中的多个可建造地块。",
   "@optionLabel:EnableVanillaMapTileCompatibility": "启用原版地图格兼容层",
-  "@optionDescription:EnableVanillaMapTileCompatibility": "创建临时地图格兼容实体，让部分原版验证路径也能识别自定义地块边界。默认关闭，除非直接限制系统无法覆盖你的工具。",
+  "@optionDescription:EnableVanillaMapTileCompatibility": "创建临时地图格兼容实体，让原版验证可以在自定义地块外显示类似城市边界的提示。默认开启，方便验证建造反馈。",
   "@optionLabel:ToggleEditMode": "切换地块编辑模式",
   "@optionDescription:ToggleEditMode": "开启或关闭自定义地块编辑模式。",
   "@bindingKey:ToggleParcelEditMode": "切换地块编辑模式",

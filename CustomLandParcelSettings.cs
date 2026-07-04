@@ -14,7 +14,7 @@ namespace CustomLandParcel
         public const string GrowAction = "GrowParcel";
         public const string ShrinkAction = "ShrinkParcel";
 
-        private const bool DefaultEnableVanillaMapTileCompatibility = false;
+        private const bool DefaultEnableVanillaMapTileCompatibility = true;
 
         public CustomLandParcelSettings(IMod mod)
             : base(mod)

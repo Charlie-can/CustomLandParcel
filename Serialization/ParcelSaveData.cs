@@ -43,7 +43,10 @@ namespace CustomLandParcel.Serialization
                 return;
             }
 
-            ReadLegacyRectangle(ref reader, store, schemaVersion);
+            DiscardUnsupportedSchemaPayload(ref reader, schemaVersion);
+            warn($"Unsupported parcel save schema={schemaVersion}; resetting custom parcels to current defaults.");
+            store.ReplaceFromSave(Array.Empty<LandParcel>(), Guid.Empty, -1, store.Version + 1,
+                $"unsupported schema={schemaVersion} deserialize");
         }
 
         private static void ReadCurrentSchema<TReader>(
@@ -94,22 +97,16 @@ namespace CustomLandParcel.Serialization
             store.ReplaceFromSave(parcels, selectedParcelId, selectedVertexIndex, savedVersion, $"deserialize schema={schemaVersion}");
         }
 
-        private static void ReadLegacyRectangle<TReader>(ref TReader reader, ParcelStore store, int schemaVersion)
+        private static void DiscardUnsupportedSchemaPayload<TReader>(ref TReader reader, int schemaVersion)
             where TReader : struct, IReader
         {
-            reader.Read(out float2 min);
-            reader.Read(out float2 max);
-            var normalizedMin = math.min(min, max);
-            var normalizedMax = math.max(min, max);
-            var center = (normalizedMin + normalizedMax) * 0.5f;
-            var size = math.max(normalizedMax - normalizedMin, ParcelGeometry.MinimumSize);
-            var parcel = ParcelGeometry.CreateRectangle("Migrated Parcel", center, size);
-            store.ReplaceFromSave(
-                new[] { parcel },
-                parcel.Id,
-                0,
-                store.Version + 1,
-                $"legacy schema={schemaVersion} deserialize");
+            if (schemaVersion != 1)
+            {
+                return;
+            }
+
+            reader.Read(out float2 _);
+            reader.Read(out float2 _);
         }
 
         private static bool TryParseGuid(string text, out Guid id)

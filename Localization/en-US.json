@@ -3,7 +3,7 @@
   "@bindingMap": "Custom Land Parcels",
   "@sectionDescription": "Edit multiple buildable parcels stored in the current save.",
   "@optionLabel:EnableVanillaMapTileCompatibility": "Enable vanilla map tile compatibility",
-  "@optionDescription:EnableVanillaMapTileCompatibility": "Creates temporary map tile compatibility entities so some vanilla validation paths can also see custom parcel boundaries. Disabled by default unless the direct restriction system does not cover your tool.",
+  "@optionDescription:EnableVanillaMapTileCompatibility": "Creates temporary map tile compatibility entities so vanilla validation can show city-limit style warnings outside custom parcel boundaries. Enabled by default for clearer build feedback.",
   "@optionLabel:ToggleEditMode": "Toggle parcel edit mode",
   "@optionDescription:ToggleEditMode": "Turns custom parcel editing on or off.",
   "@bindingKey:ToggleParcelEditMode": "Toggle parcel edit mode",

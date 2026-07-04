@@ -328,6 +328,7 @@ namespace CustomLandParcel.Data
 
             var parcel =
                 ParcelGeometry.CreateRectangle("Parcel 1", ParcelGeometry.DefaultCenter, ParcelGeometry.DefaultSize);
+            parcel.State = LandParcelState.Purchased;
             _mParcels.Add(parcel);
             _mSelection = new ParcelSelection(parcel.Id, 0);
             _mInfo($"{reason}: seeded default {parcel}.");
