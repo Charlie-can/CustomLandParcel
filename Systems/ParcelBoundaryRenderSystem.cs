@@ -10,9 +10,12 @@ namespace CustomLandParcel.Systems
     /// </summary>
     public partial class ParcelBoundaryRenderSystem : GameSystemBase
     {
-        private GameObject m_LineObject;
-        private LineRenderer m_LineRenderer;
-        private Material m_Material;
+        private static readonly int kBaseColor = Shader.PropertyToID("_BaseColor");
+        private static readonly int kColor = Shader.PropertyToID("_Color");
+
+        private GameObject _mLineObject;
+        private LineRenderer _mLineRenderer;
+        private Material _mMaterial;
 
         protected override void OnCreate()
         {
@@ -23,16 +26,16 @@ namespace CustomLandParcel.Systems
 
         protected override void OnDestroy()
         {
-            if (m_LineObject != null)
+            if (_mLineObject != null)
             {
-                Object.Destroy(m_LineObject);
-                m_LineObject = null;
+                Object.Destroy(_mLineObject);
+                _mLineObject = null;
             }
 
-            if (m_Material != null)
+            if (_mMaterial != null)
             {
-                Object.Destroy(m_Material);
-                m_Material = null;
+                Object.Destroy(_mMaterial);
+                _mMaterial = null;
             }
 
             base.OnDestroy();
@@ -40,7 +43,7 @@ namespace CustomLandParcel.Systems
 
         protected override void OnUpdate()
         {
-            if (m_LineRenderer == null)
+            if (_mLineRenderer == null)
             {
                 CreateLineRenderer();
             }
@@ -48,39 +51,38 @@ namespace CustomLandParcel.Systems
 
         private void CreateLineRenderer()
         {
-            if (m_LineObject != null)
+            if (_mLineObject != null)
             {
                 return;
             }
 
-            m_LineObject = new GameObject("Custom Land Parcel MVP Boundary");
-            Object.DontDestroyOnLoad(m_LineObject);
-            m_LineRenderer = m_LineObject.AddComponent<LineRenderer>();
-            m_LineRenderer.useWorldSpace = true;
-            m_LineRenderer.loop = true;
-            m_LineRenderer.positionCount = 4;
-            m_LineRenderer.widthMultiplier = 18f;
-            m_LineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            m_LineRenderer.receiveShadows = false;
-            m_LineRenderer.startColor = new Color(0f, 0.95f, 1f, 0.95f);
-            m_LineRenderer.endColor = new Color(0f, 0.95f, 1f, 0.95f);
+            _mLineObject = new GameObject("Custom Land Parcel MVP Boundary");
+            Object.DontDestroyOnLoad(_mLineObject);
+            _mLineRenderer = _mLineObject.AddComponent<LineRenderer>();
+            _mLineRenderer.useWorldSpace = true;
+            _mLineRenderer.loop = true;
+            _mLineRenderer.positionCount = 4;
+            _mLineRenderer.widthMultiplier = 18f;
+            _mLineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _mLineRenderer.receiveShadows = false;
+            _mLineRenderer.startColor = new Color(0f, 0.95f, 1f, 0.95f);
+            _mLineRenderer.endColor = new Color(0f, 0.95f, 1f, 0.95f);
 
-            var shader = Shader.Find("HDRP/Unlit") ?? Shader.Find("Universal Render Pipeline/Unlit") ??
-                Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color");
+            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color");
             if (shader != null)
             {
-                m_Material = new Material(shader);
-                SetMaterialColor(m_Material, new Color(0f, 0.95f, 1f, 0.95f));
-                m_LineRenderer.material = m_Material;
+                _mMaterial = new Material(shader);
+                SetMaterialColor(_mMaterial, new Color(0f, 0.95f, 1f, 0.95f));
+                _mLineRenderer.material = _mMaterial;
             }
 
             var min = ConstructionRestrictionSystem.ParcelMin;
             var max = ConstructionRestrictionSystem.ParcelMax;
             const float y = 80f;
-            m_LineRenderer.SetPosition(0, ToVector3(new float3(min.x, y, min.y)));
-            m_LineRenderer.SetPosition(1, ToVector3(new float3(max.x, y, min.y)));
-            m_LineRenderer.SetPosition(2, ToVector3(new float3(max.x, y, max.y)));
-            m_LineRenderer.SetPosition(3, ToVector3(new float3(min.x, y, max.y)));
+            _mLineRenderer.SetPosition(0, ToVector3(new float3(min.x, y, min.y)));
+            _mLineRenderer.SetPosition(1, ToVector3(new float3(max.x, y, min.y)));
+            _mLineRenderer.SetPosition(2, ToVector3(new float3(max.x, y, max.y)));
+            _mLineRenderer.SetPosition(3, ToVector3(new float3(min.x, y, max.y)));
         }
 
         private static Vector3 ToVector3(float3 value)
@@ -91,14 +93,14 @@ namespace CustomLandParcel.Systems
         private static void SetMaterialColor(Material material, Color color)
         {
             material.color = color;
-            if (material.HasProperty("_BaseColor"))
+            if (material.HasProperty(kBaseColor))
             {
-                material.SetColor("_BaseColor", color);
+                material.SetColor(kBaseColor, color);
             }
 
-            if (material.HasProperty("_Color"))
+            if (material.HasProperty(kColor))
             {
-                material.SetColor("_Color", color);
+                material.SetColor(kColor, color);
             }
         }
     }
