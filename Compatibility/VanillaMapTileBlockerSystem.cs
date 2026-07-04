@@ -20,6 +20,7 @@ namespace CustomLandParcel.Compatibility
     public partial class VanillaMapTileBlockerSystem : GameSystemBase
     {
         private const int RebuildDelayFrames = 20;
+        private const int UnlockMaskRefreshFrames = 15;
 
         public struct VanillaMapTileBlocker : IComponentData
         {
@@ -40,6 +41,7 @@ namespace CustomLandParcel.Compatibility
         private uint _mAppliedParcelVersion;
         private uint _mPendingParcelVersion;
         private int _mRebuildDelayFramesRemaining;
+        private int _mUnlockMaskRefreshFramesRemaining;
         private int _mVerificationFramesRemaining;
         private bool _mLastCompatibilityEnabled;
         private int _mDisabledLogCooldownFrames;
@@ -101,6 +103,7 @@ namespace CustomLandParcel.Compatibility
             var currentVersion = _mParcelStoreSystem.Version;
             if (_mCreated && _mAppliedParcelVersion == currentVersion)
             {
+                MaintainUnlockedMapTiles();
                 VerifyBlockersAfterCreation();
                 return;
             }
@@ -130,6 +133,7 @@ namespace CustomLandParcel.Compatibility
 
             if (!_mParcelStoreSystem.TryGetActiveUnionBounds(out var parcelMin, out var parcelMax))
             {
+                RestoreUnlockedMapTiles("no active purchased parcel union");
                 Mod.log.Warn($"Parcel blocker skipped: no parcel union bounds. {_mParcelStoreSystem.GetSummary()}.");
                 return;
             }
@@ -145,6 +149,7 @@ namespace CustomLandParcel.Compatibility
                 _mAppliedParcelVersion = currentVersion;
                 _mPendingParcelVersion = 0;
                 _mRebuildDelayFramesRemaining = 0;
+                _mUnlockMaskRefreshFramesRemaining = UnlockMaskRefreshFrames;
                 _mVerificationFramesRemaining = 120;
                 Mod.log.Info(
                     $"Applied vanilla MapTile-style blockers around active parcel union. World bounds x/z {ParcelGeometry.Format(worldMin)}..{ParcelGeometry.Format(worldMax)}; activeParcelBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}; {_mParcelStoreSystem.GetSummary()}.");
@@ -186,6 +191,7 @@ namespace CustomLandParcel.Compatibility
             _mAppliedParcelVersion = 0;
             _mPendingParcelVersion = 0;
             _mRebuildDelayFramesRemaining = 0;
+            _mUnlockMaskRefreshFramesRemaining = 0;
             _mVerificationFramesRemaining = 0;
             _mDisabledLogCooldownFrames--;
         }
@@ -384,6 +390,25 @@ namespace CustomLandParcel.Compatibility
             {
                 entities.Dispose();
             }
+        }
+
+        private void MaintainUnlockedMapTiles()
+        {
+            if (_mUnlockMaskRefreshFramesRemaining > 0)
+            {
+                _mUnlockMaskRefreshFramesRemaining--;
+                return;
+            }
+
+            if (_mParcelStoreSystem.TryGetActiveUnionBounds(out var parcelMin, out var parcelMax))
+            {
+                RefreshUnlockedMapTiles(parcelMin, parcelMax);
+                _mUnlockMaskRefreshFramesRemaining = UnlockMaskRefreshFrames;
+                return;
+            }
+
+            RestoreUnlockedMapTiles("no active purchased parcel union during maintenance");
+            _mUnlockMaskRefreshFramesRemaining = UnlockMaskRefreshFrames;
         }
 
         private void RefreshUnlockedMapTiles(float2 parcelMin, float2 parcelMax)
