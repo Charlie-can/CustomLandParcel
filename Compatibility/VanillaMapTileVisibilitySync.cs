@@ -42,6 +42,39 @@ namespace CustomLandParcel.Compatibility
             return false;
         }
 
+        internal int SyncVanillaOwnedMapTileVisibility(EntityQuery mapTileQuery, string reason)
+        {
+            if (_mShouldShowVanillaUnlockedMapTileBorders())
+            {
+                return RestoreMapTileVisibilityBySetting(mapTileQuery, reason);
+            }
+
+            using var entities = mapTileQuery.ToEntityArray(Allocator.Temp);
+            var hidden = 0;
+            for (var i = 0; i < entities.Length; i++)
+            {
+                var entity = entities[i];
+                if (!_mEntityManager.Exists(entity) ||
+                    _mEntityManager.HasComponent<Native>(entity) ||
+                    _mEntityManager.HasComponent<Hidden>(entity))
+                {
+                    continue;
+                }
+
+                _mEntityManager.AddComponentData(entity, default(VanillaMapTileHiddenByParcelSetting));
+                _mEntityManager.AddComponentData(entity, default(Hidden));
+                _mMarkUpdated(entity);
+                hidden++;
+            }
+
+            if (hidden > 0)
+            {
+                Mod.log.Info($"Hidden {hidden} vanilla owned map tile border(s) by parcel setting ({reason}).");
+            }
+
+            return hidden;
+        }
+
         internal int RestoreMapTileVisibility(EntityQuery hiddenBySettingQuery, string reason)
         {
             using var marked = hiddenBySettingQuery.ToEntityArray(Allocator.Temp);
@@ -62,6 +95,29 @@ namespace CustomLandParcel.Compatibility
             return shown;
         }
 
+        private int RestoreMapTileVisibilityBySetting(EntityQuery mapTileQuery, string reason)
+        {
+            using var entities = mapTileQuery.ToEntityArray(Allocator.Temp);
+            var shown = 0;
+            for (var i = 0; i < entities.Length; i++)
+            {
+                var entity = entities[i];
+                if (_mEntityManager.Exists(entity) &&
+                    _mEntityManager.HasComponent<VanillaMapTileHiddenByParcelSetting>(entity) &&
+                    RestoreMapTileVisibility(entity))
+                {
+                    shown++;
+                }
+            }
+
+            if (shown > 0)
+            {
+                Mod.log.Info($"Restored {shown} vanilla owned map tile border(s) by parcel setting ({reason}).");
+            }
+
+            return shown;
+        }
+
         internal int RestoreVisibleMapTilesOutsideBuildableBounds(
             EntityQuery hiddenBySettingQuery,
             float2 parcelMin,
@@ -77,7 +133,8 @@ namespace CustomLandParcel.Compatibility
                                        && _mEntityManager.HasComponent<MapTile>(entity)
                                        && !_mEntityManager.HasComponent<VanillaMapTileBlocker>(entity)
                                        && !_mShouldShowVanillaUnlockedMapTileBorders()
-                                       && overlapsBuildableParcel(entity, parcelMin, parcelMax);
+                                       && (!_mEntityManager.HasComponent<Native>(entity) ||
+                                           overlapsBuildableParcel(entity, parcelMin, parcelMax));
                 if (!shouldStayHidden && RestoreMapTileVisibility(entity))
                 {
                     shown++;

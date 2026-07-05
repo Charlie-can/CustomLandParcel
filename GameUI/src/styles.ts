@@ -18,25 +18,25 @@ export const colors = {
 export const rowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8rem",
+  gap: "6rem",
 };
 
 export const columnStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "8rem",
+  gap: "6rem",
 };
 
 export const inputStyle: React.CSSProperties = {
   flex: "1 1 auto",
   minWidth: 0,
-  height: "30rem",
-  padding: "0 8rem",
+  height: "25rem",
+  padding: "0 7rem",
   color: colors.text,
   background: colors.panelSofter,
   border: `1rem solid ${colors.border}`,
   borderRadius: "4rem",
-  fontSize: "13rem",
+  fontSize: "11rem",
 };
 
 export const launcherButtonStyle: React.CSSProperties = {
@@ -69,8 +69,8 @@ export function getButtonStyle(
   };
 
   return {
-    minHeight: "30rem",
-    padding: "0 10rem",
+    minHeight: "25rem",
+    padding: "0 8rem",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -78,7 +78,7 @@ export function getButtonStyle(
     background: active ? colors.primary : backgroundByTone[tone],
     border: active ? "1rem solid rgba(134, 212, 255, 0.82)" : `1rem solid ${colors.border}`,
     borderRadius: "4rem",
-    fontSize: "12rem",
+    fontSize: "11rem",
     fontWeight: 700,
     letterSpacing: 0,
     ...extra,

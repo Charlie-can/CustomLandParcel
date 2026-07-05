@@ -22,7 +22,7 @@ export function ParcelRow({
     <div
       style={{
         ...rowStyle,
-        padding: "7rem",
+        padding: "5rem",
         background: parcel.selected ? colors.primarySoft : colors.panelSofter,
         border: parcel.selected ? "1rem solid rgba(116, 202, 255, 0.76)" : `1rem solid ${colors.border}`,
         borderRadius: "4rem",
@@ -42,16 +42,16 @@ export function ParcelRow({
         onSelect={() => send("selectParcel", parcel.id)}
         tooltipLabel="Select parcel"
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "2rem", minWidth: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", minWidth: 0 }}>
           <div style={{ ...rowStyle, minWidth: 0 }}>
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 800 }}>
               {parcel.name || "Parcel"}
             </span>
-            <span style={{ color: isLocked ? colors.amber : colors.green, fontSize: "11rem", fontWeight: 800 }}>
+            <span style={{ color: isLocked ? colors.amber : colors.green, fontSize: "10rem", fontWeight: 800 }}>
               {isLocked ? "Locked" : "Active"}
             </span>
           </div>
-          <div style={{ ...rowStyle, color: colors.muted, fontSize: "11rem" }}>
+          <div style={{ ...rowStyle, color: colors.muted, fontSize: "10rem" }}>
             <span>{formatArea(parcel.area)}</span>
             <span>{parcel.points.length} pts</span>
           </div>
@@ -61,7 +61,7 @@ export function ParcelRow({
         disabled={parcel.selected}
         active={activeTarget}
         tone={activeTarget ? "primary" : "subtle"}
-        style={{ width: "68rem", flex: "0 0 auto" }}
+        style={{ width: "58rem", flex: "0 0 auto" }}
         tooltipLabel="Use as merge target"
         onSelect={() => onPickMergeTarget(parcel.id)}
       >

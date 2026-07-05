@@ -13,6 +13,13 @@ namespace CustomLandParcel.Systems
     /// </summary>
     public partial class ParcelBoundaryRenderSystem : GameSystemBase
     {
+        private struct ParcelOverlayStyle
+        {
+            public Color OutlineColor;
+            public Color FillColor;
+            public float Width;
+        }
+
         private OverlayRenderSystem _mOverlayRenderSystem;
         private ParcelStoreSystem _mParcelStoreSystem;
         private ParcelEditToolSystem _mParcelEditToolSystem;
@@ -42,7 +49,8 @@ namespace CustomLandParcel.Systems
                 buffer,
                 _mParcelStoreSystem,
                 _mParcelEditToolSystem.Session,
-                _mParcelEditToolSystem.IsToolActive);
+                _mParcelEditToolSystem.IsToolActive,
+                GetOverlayStyle());
             DrawDraft(buffer, _mParcelEditToolSystem.Session);
             _mOverlayRenderSystem.AddBufferWriter(default(JobHandle));
 
@@ -60,11 +68,11 @@ namespace CustomLandParcel.Systems
             OverlayRenderSystem.Buffer buffer,
             ParcelStoreSystem store,
             ParcelEditSession session,
-            bool editToolActive)
+            bool editToolActive,
+            ParcelOverlayStyle overlayStyle)
         {
             const OverlayRenderSystem.StyleFlags style = OverlayRenderSystem.StyleFlags.Projected |
                                                            OverlayRenderSystem.StyleFlags.DepthFadeBelow;
-            const float width = 7f;
             const float dashLength = 64f;
             const float gapLength = 48f;
             var showEditHandles = editToolActive ||
@@ -80,8 +88,8 @@ namespace CustomLandParcel.Systems
                 }
 
                 var selected = parcel.Id == store.SelectedParcelId;
-                var outlineColor = GetOutlineColor(parcel.State, selected);
-                var fillColor = GetFillColor(parcel.State, selected);
+                var outlineColor = GetOutlineColor(parcel.State, selected, overlayStyle);
+                var fillColor = GetFillColor(parcel.State, selected, overlayStyle);
                 for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
                 {
                     var hoveringEdge = session.Hover.Kind == ParcelEditHitKind.Edge
@@ -94,7 +102,7 @@ namespace CustomLandParcel.Systems
                         style,
                         parcel.Points[pointIndex],
                         parcel.Points[(pointIndex + 1) % parcel.Points.Count],
-                        hoveringEdge ? width + 3f : width,
+                        hoveringEdge ? overlayStyle.Width + 3f : overlayStyle.Width,
                         dashLength,
                         gapLength);
                 }
@@ -125,6 +133,38 @@ namespace CustomLandParcel.Systems
                         hoveringVertex ? 44f : vertexIndex == store.SelectedVertexIndex ? 38f : 26f);
                 }
             }
+        }
+
+        private static ParcelOverlayStyle GetOverlayStyle()
+        {
+            var settings = Mod.Settings;
+            if (settings == null)
+            {
+                return new ParcelOverlayStyle
+                {
+                    OutlineColor = new Color(0.2f, 1f, 0.58f, 0.9f),
+                    FillColor = new Color(0.2f, 1f, 0.58f, 0.28f),
+                    Width = 7f
+                };
+            }
+
+            var red = math.clamp(settings.ParcelBoundaryRed / 255f, 0f, 1f);
+            var green = math.clamp(settings.ParcelBoundaryGreen / 255f, 0f, 1f);
+            var blue = math.clamp(settings.ParcelBoundaryBlue / 255f, 0f, 1f);
+            return new ParcelOverlayStyle
+            {
+                OutlineColor = new Color(
+                    red,
+                    green,
+                    blue,
+                    math.clamp(settings.ParcelBoundaryOpacity / 100f, 0f, 1f)),
+                FillColor = new Color(
+                    red,
+                    green,
+                    blue,
+                    math.clamp(settings.ParcelFillOpacity / 100f, 0f, 1f)),
+                Width = math.clamp(settings.ParcelBoundaryWidth, 2f, 14f)
+            };
         }
 
         private static void DrawDraft(OverlayRenderSystem.Buffer buffer, ParcelEditSession session)
@@ -169,17 +209,21 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private static Color GetOutlineColor(LandParcelState state, bool selected)
+        private static Color GetOutlineColor(LandParcelState state, bool selected, ParcelOverlayStyle overlayStyle)
         {
             if (selected)
             {
-                return new Color(0.2f, 1f, 0.58f, 0.9f);
+                return overlayStyle.OutlineColor;
             }
 
             switch (state)
             {
                 case LandParcelState.Purchased:
-                    return new Color(0.35f, 0.92f, 0.45f, 0.74f);
+                    return new Color(
+                        overlayStyle.OutlineColor.r,
+                        overlayStyle.OutlineColor.g,
+                        overlayStyle.OutlineColor.b,
+                        overlayStyle.OutlineColor.a * 0.78f);
                 case LandParcelState.Locked:
                     return new Color(0.45f, 0.45f, 0.45f, 0.45f);
                 default:
@@ -187,17 +231,21 @@ namespace CustomLandParcel.Systems
             }
         }
 
-        private static Color GetFillColor(LandParcelState state, bool selected)
+        private static Color GetFillColor(LandParcelState state, bool selected, ParcelOverlayStyle overlayStyle)
         {
             if (selected)
             {
-                return new Color(0.2f, 1f, 0.58f, 0.32f);
+                return overlayStyle.FillColor;
             }
 
             switch (state)
             {
                 case LandParcelState.Purchased:
-                    return new Color(0.35f, 0.92f, 0.45f, 0.24f);
+                    return new Color(
+                        overlayStyle.FillColor.r,
+                        overlayStyle.FillColor.g,
+                        overlayStyle.FillColor.b,
+                        overlayStyle.FillColor.a * 0.78f);
                 case LandParcelState.Locked:
                     return new Color(0.45f, 0.45f, 0.45f, 0.18f);
                 default:

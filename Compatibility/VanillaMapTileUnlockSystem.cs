@@ -132,18 +132,20 @@ namespace CustomLandParcel.Compatibility
         private void MaintainUnlockedMapTiles()
         {
             TryAlignDefaultParcelToVanillaOwnedTiles();
+            var vanillaVisibilityChanged = _mVisibilitySync.SyncVanillaOwnedMapTileVisibility(
+                _mVanillaMapTileQuery,
+                "compatibility refresh");
             if (_mParcelStoreSystem.TryGetBuildableUnionBounds(out var parcelMin, out var parcelMax))
             {
-                RefreshUnlockedMapTiles(parcelMin, parcelMax);
+                RefreshUnlockedMapTiles(parcelMin, parcelMax, vanillaVisibilityChanged);
                 return;
             }
 
-            _mVisibilitySync.RestoreMapTileVisibility(_mHiddenBySettingQuery, "no buildable custom parcel union");
             _mOwnershipSync.RestoreLockedMapTiles(_mLockedByParcelQuery, "no buildable custom parcel union");
             _mOwnershipSync.RestoreUnlockedMapTiles(_mUnlockedByParcelQuery, "no buildable custom parcel union");
         }
 
-        private void RefreshUnlockedMapTiles(float2 parcelMin, float2 parcelMax)
+        private void RefreshUnlockedMapTiles(float2 parcelMin, float2 parcelMax, int vanillaVisibilityChanged)
         {
             var shownBySetting = _mVisibilitySync.RestoreVisibleMapTilesOutsideBuildableBounds(
                 _mHiddenBySettingQuery,
@@ -190,10 +192,10 @@ namespace CustomLandParcel.Compatibility
                 }
             }
 
-            if (unlocked > 0 || locked > 0 || hiddenBySetting > 0 || shownBySetting > 0)
+            if (unlocked > 0 || locked > 0 || hiddenBySetting > 0 || shownBySetting > 0 || vanillaVisibilityChanged > 0)
             {
                 Mod.log.Info(
-                    $"Parcel map tile ownership synchronized: unlockedInside={unlocked}, lockedOutside={locked}, hiddenBySetting={hiddenBySetting}, shownBySetting={shownBySetting}, overlapCandidates={overlapCandidates}, alreadyUnlockedByParcel={alreadyUnlockedByParcel}, alreadyVanillaOwnedInside={alreadyVanillaOwned}, mapTileCandidates={entities.Length}, buildableBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, showVanillaBorders={ShouldShowVanillaUnlockedMapTileBorders()}, {_mParcelStoreSystem.GetSummary()}.");
+                    $"Parcel map tile ownership synchronized: unlockedInside={unlocked}, lockedOutside={locked}, hiddenBySetting={hiddenBySetting}, shownBySetting={shownBySetting}, vanillaVisibilityChanged={vanillaVisibilityChanged}, overlapCandidates={overlapCandidates}, alreadyUnlockedByParcel={alreadyUnlockedByParcel}, alreadyVanillaOwnedInside={alreadyVanillaOwned}, mapTileCandidates={entities.Length}, buildableBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, showVanillaBorders={ShouldShowVanillaUnlockedMapTileBorders()}, {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 

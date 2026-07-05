@@ -46,33 +46,33 @@ export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
     <div
       style={{
         position: "absolute",
-        top: "64rem",
-        left: "72rem",
-        width: "430rem",
-        maxHeight: "720rem",
+        top: "56rem",
+        left: "64rem",
+        width: "360rem",
+        maxHeight: "610rem",
         overflowY: "auto",
         zIndex: 10000,
         display: "flex",
         flexDirection: "column",
-        gap: "12rem",
-        padding: "12rem",
+        gap: "8rem",
+        padding: "9rem",
         color: colors.text,
         background: colors.panel,
         border: `1rem solid ${colors.border}`,
         borderRadius: "5rem",
         boxShadow: "0 12rem 38rem rgba(0, 0, 0, 0.34)",
-        fontSize: "13rem",
+        fontSize: "11rem",
       }}
     >
-      <div style={{ ...rowStyle, justifyContent: "space-between", minHeight: "36rem" }}>
+      <div style={{ ...rowStyle, justifyContent: "space-between", minHeight: "30rem" }}>
         <div style={{ ...columnStyle, gap: "2rem", minWidth: 0 }}>
-          <span style={{ fontSize: "17rem", fontWeight: 900 }}>Custom Land Parcel</span>
-          <span style={{ color: colors.muted, fontSize: "11rem" }}>
+          <span style={{ fontSize: "14rem", fontWeight: 900 }}>Custom Land Parcel</span>
+          <span style={{ color: colors.muted, fontSize: "10rem" }}>
             {parcels.length} parcels
             {selected ? ` / ${selected.points.length} pts / vertex ${selected.selectedVertexIndex + 1}` : " / no selection"}
           </span>
         </div>
-        <PanelButton tone="subtle" style={{ width: "34rem", padding: 0, flex: "0 0 auto" }} onSelect={onClose}>
+        <PanelButton tone="subtle" style={{ width: "28rem", minHeight: "28rem", padding: 0, flex: "0 0 auto" }} onSelect={onClose}>
           x
         </PanelButton>
       </div>
@@ -82,14 +82,14 @@ export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
           <PanelButton
             active={editToolActive}
             tone={editToolActive ? "primary" : "default"}
-            style={{ flex: "1 1 0", minHeight: "38rem" }}
+            style={{ flex: "1 1 0", minHeight: "31rem" }}
             tooltipLabel="Toggle map parcel edit tool"
             onSelect={() => send("setParcelEditToolActive", !editToolActive)}
           >
             {editToolActive ? "Map Tool On" : "Map Tool Off"}
           </PanelButton>
           <PanelButton
-            style={{ flex: "1 1 0", minHeight: "38rem" }}
+            style={{ flex: "1 1 0", minHeight: "31rem" }}
             tooltipLabel="Add a rectangular parcel"
             onSelect={() => send("addRectangle")}
           >
@@ -99,7 +99,7 @@ export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
       </Section>
 
       <Section title="Parcels">
-        <div style={{ ...columnStyle, maxHeight: "190rem", overflowY: "auto", gap: "6rem" }}>
+        <div style={{ ...columnStyle, maxHeight: "112rem", overflowY: "auto", gap: "4rem" }}>
           {parcels.map((parcel) => (
             <ParcelRow
               key={parcel.id}
@@ -136,7 +136,7 @@ export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
       <Section title="Move">
         <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between" }}>
           <MovePad disabled={!selected} step={step} onMove={moveSelectedParcel} />
-          <label style={{ ...columnStyle, gap: "4rem", color: colors.muted, fontSize: "11rem", width: "100rem" }}>
+          <label style={{ ...columnStyle, gap: "3rem", color: colors.muted, fontSize: "10rem", width: "84rem" }}>
             Step
             <input
               style={{ ...inputStyle, width: "100%", flex: "0 0 auto" }}

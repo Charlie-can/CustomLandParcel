@@ -7,16 +7,16 @@ import { colors, columnStyle } from "styles";
 
 export function VertexList({ selected }: { selected: SelectedParcel | null }): JSX.Element {
   if (!selected || !selected.points || selected.points.length === 0) {
-    return <div style={{ color: colors.muted, fontSize: "12rem" }}>No selected parcel.</div>;
+    return <div style={{ color: colors.muted, fontSize: "11rem" }}>No selected parcel.</div>;
   }
 
   return (
-    <div style={{ ...columnStyle, maxHeight: "150rem", overflowY: "auto", gap: "5rem" }}>
+    <div style={{ ...columnStyle, maxHeight: "96rem", overflowY: "auto", gap: "3rem" }}>
       {selected.points.map((point, index) => (
         <PanelButton
           key={`${selected.id}-${index}`}
           active={index === selected.selectedVertexIndex}
-          style={{ justifyContent: "flex-start", width: "100%" }}
+          style={{ justifyContent: "flex-start", width: "100%", minHeight: "24rem" }}
           tooltipLabel="Select vertex"
           onSelect={() => send("selectVertex", index)}
         >
