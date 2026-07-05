@@ -58,6 +58,10 @@ Demolition outside custom parcels may still follow vanilla city-limit behavior.
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
+	<!--Forum link-->
+	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/custom-land-parcel-mod-discussion.1933172/" />
+	<!--External link, can be set multiple times-->
+	<ExternalLink Type="github" Url="https://github.com/Charlie-can/CustomLandParcel" />
 	<!--Tag, can be set multiple times-->
 	<Tag Value="UIAreas" />
 	<!--Version of the mod-->
