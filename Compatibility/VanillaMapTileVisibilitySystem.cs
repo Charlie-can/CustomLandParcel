@@ -1,20 +1,18 @@
 using Game;
 using Game.Areas;
 using Game.Common;
-using Game.Tools;
 using Unity.Entities;
 
 namespace CustomLandParcel.Compatibility
 {
     /// <summary>
-    /// Hides vanilla MapTile border overlays after tools have generated Temp/Error/Warning areas and before rendering.
-    /// AreaBorderRenderSystem only draws MapTile borders from those transient area entities, so permanent MapTiles are not touched here.
+    /// Hides vanilla MapTile area borders before AreaBorderRenderSystem samples visible Area entities.
     /// </summary>
     public partial class VanillaMapTileVisibilitySystem : GameSystemBase
     {
         private const int LogCooldownFrames = 300;
 
-        private EntityQuery _mRenderableMapTileBorderQuery;
+        private EntityQuery _mMapTileBorderQuery;
         private EntityQuery _mHiddenBySettingQuery;
         private VanillaMapTileVisibilitySync _mVisibilitySync;
         private int _mLogCooldownFrames;
@@ -24,18 +22,13 @@ namespace CustomLandParcel.Compatibility
         protected override void OnCreate()
         {
             base.OnCreate();
-            _mRenderableMapTileBorderQuery = GetEntityQuery(new EntityQueryDesc
+            _mMapTileBorderQuery = GetEntityQuery(new EntityQueryDesc
             {
                 All = new[]
                 {
+                    ComponentType.ReadOnly<Area>(),
                     ComponentType.ReadOnly<MapTile>(),
                     ComponentType.ReadOnly<Node>()
-                },
-                Any = new[]
-                {
-                    ComponentType.ReadOnly<Temp>(),
-                    ComponentType.ReadOnly<Error>(),
-                    ComponentType.ReadOnly<Warning>()
                 },
                 None = new[]
                 {
@@ -48,7 +41,7 @@ namespace CustomLandParcel.Compatibility
                 EntityManager,
                 MarkUpdated,
                 ShouldShowVanillaUnlockedMapTileBorders);
-            Mod.log.Info("VanillaMapTileVisibilitySystem enabled for render-time vanilla MapTile border visibility.");
+            Mod.log.Info("VanillaMapTileVisibilitySystem enabled for vanilla Area+MapTile border visibility.");
         }
 
         protected override void OnDestroy()
@@ -72,7 +65,7 @@ namespace CustomLandParcel.Compatibility
             changed += showVanillaBorders
                 ? _mVisibilitySync.RestoreMapTileVisibility(_mHiddenBySettingQuery, "render visibility enabled")
                 : _mVisibilitySync.SyncMapTileBorderVisibility(
-                    _mRenderableMapTileBorderQuery,
+                    _mMapTileBorderQuery,
                     "render visibility refresh");
 
             if (_mLastShowVanillaBorders != showVanillaBorders)
@@ -80,14 +73,14 @@ namespace CustomLandParcel.Compatibility
                 _mLastShowVanillaBorders = showVanillaBorders;
                 _mLogCooldownFrames = 0;
                 Mod.log.Info(
-                    $"Vanilla MapTile border visibility setting changed: showVanillaBorders={showVanillaBorders}, changedEntities={changed}.");
+                    $"Vanilla MapTile border visibility setting changed: showVanillaBorders={showVanillaBorders}, changedEntities={changed}, mapTileBorders={_mMapTileBorderQuery.CalculateEntityCount()}, hiddenBySetting={_mHiddenBySettingQuery.CalculateEntityCount()}.");
                 return;
             }
 
             if (changed > 0 && _mLogCooldownFrames <= 0)
             {
                 Mod.log.Info(
-                    $"Vanilla MapTile border visibility synchronized: showVanillaBorders={showVanillaBorders}, changedEntities={changed}.");
+                    $"Vanilla MapTile border visibility synchronized: showVanillaBorders={showVanillaBorders}, changedEntities={changed}, mapTileBorders={_mMapTileBorderQuery.CalculateEntityCount()}, hiddenBySetting={_mHiddenBySettingQuery.CalculateEntityCount()}.");
                 _mLogCooldownFrames = LogCooldownFrames;
             }
 

@@ -13,7 +13,7 @@ import {
 } from "bindings";
 import { Translator } from "i18n";
 import { TranslationKey } from "i18n/translations";
-import { colors, compactInputStyle, columnStyle, rowStyle, swatchStyle } from "styles";
+import { colors, columnStyle, rowStyle, swatchStyle } from "styles";
 
 const appearanceFields = [
   { key: "ParcelBoundaryRed", label: "appearance.red", min: 0, max: 255, binding: parcelBoundaryRedBinding },
@@ -25,6 +25,14 @@ const appearanceFields = [
 ] as const;
 
 type AppearanceFieldConfig = (typeof appearanceFields)[number];
+
+const colorPresets = [
+  { label: "Mint", red: 51, green: 255, blue: 148 },
+  { label: "Sky", red: 74, green: 180, blue: 255 },
+  { label: "Amber", red: 255, green: 196, blue: 72 },
+  { label: "Rose", red: 255, green: 112, blue: 128 },
+  { label: "White", red: 240, green: 245, blue: 245 },
+] as const;
 
 export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
   const red = useValue(parcelBoundaryRedBinding);
@@ -47,7 +55,29 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
         </label>
         <div style={swatchStyle(swatchColor)} title={t("appearance.color")} />
       </div>
-      <div style={{ ...rowStyle, flexWrap: "wrap", alignItems: "center", gap: "5rem" }}>
+      <div style={{ ...rowStyle, flexWrap: "wrap", alignItems: "center", gap: "4rem" }}>
+        {colorPresets.map((preset) => (
+          <button
+            key={preset.label}
+            type="button"
+            title={preset.label}
+            onClick={() => applyColorPreset(preset)}
+            style={{
+              width: "18rem",
+              height: "18rem",
+              minWidth: "18rem",
+              minHeight: "18rem",
+              padding: "0rem",
+              border: isActivePreset(preset, red, green, blue)
+                ? "2rem solid rgba(240, 250, 255, 0.96)"
+                : "1rem solid rgba(150, 182, 197, 0.58)",
+              background: `rgb(${preset.red}, ${preset.green}, ${preset.blue})`,
+              borderRadius: "3rem",
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ ...columnStyle, gap: "4rem" }}>
         {appearanceFields.map((field) => (
           <AppearanceField key={field.key} field={field} t={t} />
         ))}
@@ -59,20 +89,36 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
 function AppearanceField({ field, t }: { field: AppearanceFieldConfig; t: Translator }): JSX.Element {
   const value = useValue(field.binding);
   return (
-    <label style={{ ...rowStyle, flex: "0 0 auto", gap: "3rem", color: colors.muted, fontSize: "10rem" }}>
-      <span>{t(field.label as TranslationKey)}</span>
+    <label style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "10rem" }}>
+      <span style={{ width: "58rem" }}>{t(field.label as TranslationKey)}</span>
       <input
-        style={compactInputStyle}
-        type="number"
+        type="range"
         min={field.min}
         max={field.max}
         value={value}
+        step={1}
         onChange={(event) =>
           setParcelAppearanceValue(field.key, clamp(Number(event.currentTarget.value) || 0, field.min, field.max))
         }
+        style={{
+          flex: "1 1 auto",
+          minWidth: "92rem",
+          height: "12rem",
+        }}
       />
+      <span style={{ width: "28rem", textAlign: "right", color: colors.text }}>{value}</span>
     </label>
   );
+}
+
+function applyColorPreset(preset: (typeof colorPresets)[number]): void {
+  setParcelAppearanceValue("ParcelBoundaryRed", preset.red);
+  setParcelAppearanceValue("ParcelBoundaryGreen", preset.green);
+  setParcelAppearanceValue("ParcelBoundaryBlue", preset.blue);
+}
+
+function isActivePreset(preset: (typeof colorPresets)[number], red: number, green: number, blue: number): boolean {
+  return preset.red === red && preset.green === green && preset.blue === blue;
 }
 
 function clamp(value: number, min: number, max: number): number {
