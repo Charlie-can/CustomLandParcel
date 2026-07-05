@@ -12,7 +12,7 @@ namespace CustomLandParcel.Patches
         private static object _mHarmony;
         private static Type _mHarmonyType;
 
-        public static void Apply()
+        public static void Apply(string executableAssetPath)
         {
             if (_mHarmony != null)
             {
@@ -21,7 +21,7 @@ namespace CustomLandParcel.Patches
 
             try
             {
-                var harmonyAssembly = LoadHarmonyAssembly();
+                var harmonyAssembly = LoadHarmonyAssembly(executableAssetPath);
                 _mHarmonyType = harmonyAssembly.GetType("HarmonyLib.Harmony", true);
                 var harmonyMethodType = harmonyAssembly.GetType("HarmonyLib.HarmonyMethod", true);
                 var original = typeof(CityBoundaryMeshSystem).GetMethod(
@@ -74,18 +74,98 @@ namespace CustomLandParcel.Patches
             }
         }
 
-        private static Assembly LoadHarmonyAssembly()
+        private static Assembly LoadHarmonyAssembly(string executableAssetPath)
         {
+            var loadedAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(assembly => assembly.GetName().Name == "0Harmony");
+            if (loadedAssembly != null)
+            {
+                Mod.log.Info($"CustomLandParcel Harmony assembly already loaded: {SafeAssemblyLocation(loadedAssembly)}.");
+                return loadedAssembly;
+            }
+
             try
             {
-                return Assembly.Load("0Harmony");
+                var assembly = Assembly.Load("0Harmony");
+                Mod.log.Info($"CustomLandParcel Harmony assembly loaded by name: {SafeAssemblyLocation(assembly)}.");
+                return assembly;
+            }
+            catch (Exception exception)
+            {
+                Mod.log.Warn(exception, "CustomLandParcel Harmony assembly was not loadable by name; probing mod folders.");
+            }
+
+            foreach (var directory in GetHarmonyProbeDirectories(executableAssetPath))
+            {
+                if (string.IsNullOrWhiteSpace(directory))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var assemblyPath = Path.Combine(directory, "0Harmony.dll");
+                    if (!File.Exists(assemblyPath))
+                    {
+                        continue;
+                    }
+
+                    var assembly = Assembly.LoadFrom(assemblyPath);
+                    Mod.log.Info($"CustomLandParcel Harmony assembly loaded from {assemblyPath}.");
+                    return assembly;
+                }
+                catch (Exception exception)
+                {
+                    Mod.log.Warn(exception, $"CustomLandParcel Harmony probe failed for directory '{directory}'.");
+                }
+            }
+
+            throw new FileNotFoundException("0Harmony.dll was not found in loaded assemblies or known mod folders.");
+        }
+
+        private static string[] GetHarmonyProbeDirectories(string executableAssetPath)
+        {
+            return new[]
+            {
+                SafeDirectoryName(executableAssetPath),
+                SafeDirectoryName(typeof(CustomLandParcelPatcher).Assembly.Location),
+                SafeDirectoryName(typeof(Mod).Assembly.Location),
+                AppDomain.CurrentDomain.BaseDirectory,
+                Directory.GetCurrentDirectory()
+            };
+        }
+
+        private static string SafeDirectoryName(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            try
+            {
+                if (Directory.Exists(path))
+                {
+                    return path;
+                }
+
+                return Path.GetDirectoryName(path);
             }
             catch
             {
-                var assemblyPath = Path.Combine(
-                    Path.GetDirectoryName(typeof(CustomLandParcelPatcher).Assembly.Location) ?? string.Empty,
-                    "0Harmony.dll");
-                return Assembly.LoadFrom(assemblyPath);
+                return null;
+            }
+        }
+
+        private static string SafeAssemblyLocation(Assembly assembly)
+        {
+            try
+            {
+                return string.IsNullOrWhiteSpace(assembly.Location) ? "<no location>" : assembly.Location;
+            }
+            catch
+            {
+                return "<unavailable>";
             }
         }
     }

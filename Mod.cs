@@ -24,7 +24,15 @@ namespace CustomLandParcel
             Settings.RegisterInOptionsUI();
             Settings.RegisterKeyBindings();
             log.Info("Registered CustomLandParcel settings, localization, and keybindings in the game options UI.");
-            CustomLandParcelPatcher.Apply();
+
+            var executableAssetPath = string.Empty;
+            if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
+            {
+                executableAssetPath = asset.path;
+                log.Info($"Current mod asset at {asset.path}");
+            }
+
+            CustomLandParcelPatcher.Apply(executableAssetPath);
 
             updateSystem.UpdateAt<ParcelStoreSystem>(SystemUpdatePhase.Serialize);
             updateSystem.UpdateAt<VanillaMapTileUnlockSystem>(SystemUpdatePhase.PreTool);
@@ -39,10 +47,6 @@ namespace CustomLandParcel
             log.Info(
                 "Registered ParcelStoreSystem at Serialize, VanillaMapTileUnlockSystem at PreTool, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/ParcelPlacementDiagnosticsSystem at PostTool, VanillaMapTileVisibilitySystem/ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
 
-            if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
-            {
-                log.Info($"Current mod asset at {asset.path}");
-            }
         }
 
         public void OnDispose()
