@@ -4,7 +4,7 @@ import { Button } from "cs2/ui";
 import { activeLocaleBinding } from "bindings";
 import { ParcelPanel } from "features/panel/ParcelPanel";
 import { createTranslator } from "i18n";
-import { launcherButtonStyle } from "styles";
+import customLandParcelIcon from "assets/custom-land-parcel.svg";
 
 export function CustomLandParcelRoot(): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -14,13 +14,12 @@ export function CustomLandParcelRoot(): JSX.Element {
   return (
     <>
       <Button
-        style={launcherButtonStyle}
+        src={customLandParcelIcon}
+        variant="floating"
         selected={open}
         onSelect={() => setOpen(!open)}
         tooltipLabel={t("app.open")}
-      >
-        LP
-      </Button>
+      />
       {open && <ParcelPanel t={t} onClose={() => setOpen(false)} />}
     </>
   );

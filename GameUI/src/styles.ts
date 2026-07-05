@@ -60,23 +60,6 @@ export const compactInputStyle: React.CSSProperties = {
   fontSize: "10rem",
 };
 
-export const launcherButtonStyle: React.CSSProperties = {
-  width: "44rem",
-  height: "44rem",
-  minHeight: "44rem",
-  padding: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: colors.text,
-  background: "#4bc3f1",
-  border: "1rem solid rgba(255, 255, 255, 0.22)",
-  borderRadius: "5rem",
-  fontSize: "14rem",
-  fontWeight: 800,
-  letterSpacing: 0,
-};
-
 export function swatchStyle(color: string): React.CSSProperties {
   return {
     width: "22rem",

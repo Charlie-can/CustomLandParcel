@@ -61,11 +61,11 @@ Demolition outside custom parcels may still follow vanilla city-limit behavior.
 	<!--Tag, can be set multiple times-->
 	<Tag Value="UIAreas" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1.1-beta" />
+	<ModVersion Value="0.1.3-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="Fixed the in-game UI module packaging so the launcher is included in the subscribed mod, and ordered the top-left launcher after existing GameTopLeft buttons. / 修复订阅版打包未包含游戏内 UI 模块的问题，并将左上角启动按钮按 GameTopLeft 顺序排到现有按钮之后。" />
+	<ChangeLog Value="Replaced the top-left launcher text with a custom SVG parcel icon and switched it to the native floating button style for consistent sizing with other mods. / 将左上角启动按钮从文字替换为自定义 SVG 地块图标，并改用原生 floating 按钮样式，使尺寸和其他 Mod 按钮保持一致。" />
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--Supported values Public, Private, Unlisted-->
