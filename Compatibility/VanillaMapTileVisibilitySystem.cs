@@ -6,7 +6,7 @@ using Unity.Entities;
 namespace CustomLandParcel.Compatibility
 {
     /// <summary>
-    /// Hides vanilla MapTile area borders before AreaBorderRenderSystem samples visible Area entities.
+    /// Keeps legacy hidden MapTile markers cleaned up while render patches handle vanilla border visibility.
     /// </summary>
     public partial class VanillaMapTileVisibilitySystem : GameSystemBase
     {
@@ -39,8 +39,7 @@ namespace CustomLandParcel.Compatibility
             _mHiddenBySettingQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileHiddenByParcelSetting>());
             _mVisibilitySync = new VanillaMapTileVisibilitySync(
                 EntityManager,
-                MarkUpdated,
-                ShouldShowVanillaUnlockedMapTileBorders);
+                MarkUpdated);
             Mod.log.Info("VanillaMapTileVisibilitySystem enabled for vanilla Area+MapTile border visibility.");
         }
 
@@ -66,21 +65,21 @@ namespace CustomLandParcel.Compatibility
                 ? _mVisibilitySync.RestoreMapTileVisibility(_mHiddenBySettingQuery, "render visibility enabled")
                 : _mVisibilitySync.SyncMapTileBorderVisibility(
                     _mMapTileBorderQuery,
-                    "render visibility refresh");
+                    "render-only visibility refresh");
 
             if (_mLastShowVanillaBorders != showVanillaBorders)
             {
                 _mLastShowVanillaBorders = showVanillaBorders;
                 _mLogCooldownFrames = 0;
                 Mod.log.Info(
-                    $"Vanilla MapTile border visibility setting changed: showVanillaBorders={showVanillaBorders}, changedEntities={changed}, mapTileBorders={_mMapTileBorderQuery.CalculateEntityCount()}, hiddenBySetting={_mHiddenBySettingQuery.CalculateEntityCount()}.");
+                    $"Vanilla MapTile border visibility setting changed: showVanillaBorders={showVanillaBorders}, restoredLegacyHiddenEntities={changed}, mapTileBorders={_mMapTileBorderQuery.CalculateEntityCount()}, hiddenBySetting={_mHiddenBySettingQuery.CalculateEntityCount()}, usesEntityHidden=false.");
                 return;
             }
 
             if (changed > 0 && _mLogCooldownFrames <= 0)
             {
                 Mod.log.Info(
-                    $"Vanilla MapTile border visibility synchronized: showVanillaBorders={showVanillaBorders}, changedEntities={changed}, mapTileBorders={_mMapTileBorderQuery.CalculateEntityCount()}, hiddenBySetting={_mHiddenBySettingQuery.CalculateEntityCount()}.");
+                    $"Vanilla MapTile border visibility synchronized: showVanillaBorders={showVanillaBorders}, restoredLegacyHiddenEntities={changed}, mapTileBorders={_mMapTileBorderQuery.CalculateEntityCount()}, hiddenBySetting={_mHiddenBySettingQuery.CalculateEntityCount()}, usesEntityHidden=false.");
                 _mLogCooldownFrames = LogCooldownFrames;
             }
 

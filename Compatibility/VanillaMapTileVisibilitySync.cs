@@ -11,43 +11,18 @@ namespace CustomLandParcel.Compatibility
     {
         private readonly EntityManager _mEntityManager;
         private readonly Action<Entity> _mMarkUpdated;
-        private readonly Func<bool> _mShouldShowVanillaUnlockedMapTileBorders;
 
         internal VanillaMapTileVisibilitySync(
             EntityManager entityManager,
-            Action<Entity> markUpdated,
-            Func<bool> shouldShowVanillaUnlockedMapTileBorders)
+            Action<Entity> markUpdated)
         {
             _mEntityManager = entityManager;
             _mMarkUpdated = markUpdated;
-            _mShouldShowVanillaUnlockedMapTileBorders = shouldShowVanillaUnlockedMapTileBorders;
         }
 
         internal int SyncMapTileBorderVisibility(EntityQuery mapTileBorderQuery, string reason)
         {
-            if (_mShouldShowVanillaUnlockedMapTileBorders())
-            {
-                return RestoreMapTileVisibilityBySetting(mapTileBorderQuery, reason);
-            }
-
-            using var entities = mapTileBorderQuery.ToEntityArray(Allocator.Temp);
-            var hidden = 0;
-            for (var i = 0; i < entities.Length; i++)
-            {
-                var entity = entities[i];
-                if (!_mEntityManager.Exists(entity) ||
-                    _mEntityManager.HasComponent<Hidden>(entity))
-                {
-                    continue;
-                }
-
-                _mEntityManager.AddComponentData(entity, default(VanillaMapTileHiddenByParcelSetting));
-                _mEntityManager.AddComponentData(entity, default(Hidden));
-                _mMarkUpdated(entity);
-                hidden++;
-            }
-
-            return hidden;
+            return RestoreMapTileVisibilityBySetting(mapTileBorderQuery, reason);
         }
 
         internal int RestoreMapTileVisibility(EntityQuery hiddenBySettingQuery, string reason)

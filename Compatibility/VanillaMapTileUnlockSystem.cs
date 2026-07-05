@@ -53,8 +53,7 @@ namespace CustomLandParcel.Compatibility
             _mHiddenBySettingQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileHiddenByParcelSetting>());
             _mVisibilitySync = new VanillaMapTileVisibilitySync(
                 EntityManager,
-                MarkUpdated,
-                ShouldShowVanillaUnlockedMapTileBorders);
+                MarkUpdated);
             _mOwnershipSync = new VanillaMapTileOwnershipSync(
                 EntityManager,
                 MarkUpdated,
