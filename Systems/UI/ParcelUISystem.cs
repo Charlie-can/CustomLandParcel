@@ -20,6 +20,7 @@ namespace CustomLandParcel.Systems
         private ParcelEditToolSystem _mParcelEditToolSystem;
         private RawValueBinding _mParcelsBinding;
         private uint _mLastLoggedVersion;
+        private int _mUpdateExceptionLogCooldownFrames;
 
         public override GameMode gameMode => GameMode.Game;
 
@@ -84,21 +85,21 @@ namespace CustomLandParcel.Systems
                 "parcelBoundaryWidth",
                 () => _mParcelStoreSystem.SelectedParcel?.BoundaryWidth ?? Mod.Settings?.ParcelBoundaryWidth ?? 7));
 
-            AddBinding(new TriggerBinding(Group, "addRectangle", AddRectangle));
-            AddBinding(new TriggerBinding<string>(Group, "selectParcel", SelectParcel));
-            AddBinding(new TriggerBinding<int>(Group, "selectVertex", SelectVertex));
-            AddBinding(new TriggerBinding<int>(Group, "selectNextParcel", SelectNextParcel));
-            AddBinding(new TriggerBinding<string>(Group, "renameSelectedParcel", RenameSelectedParcel));
-            AddBinding(new TriggerBinding(Group, "deleteSelectedParcel", DeleteSelectedParcel));
-            AddBinding(new TriggerBinding<string>(Group, "mergeSelectedParcelWith", MergeSelectedParcelWith));
-            AddBinding(new TriggerBinding<bool>(Group, "setParcelEditToolActive", SetParcelEditToolActive));
-            AddBinding(new TriggerBinding<float2>(Group, "moveSelectedParcel", MoveSelectedParcel));
-            AddBinding(new TriggerBinding<float2>(Group, "moveSelectedVertex", MoveSelectedVertex));
-            AddBinding(new TriggerBinding(Group, "insertVertexAfterSelected", InsertVertexAfterSelected));
-            AddBinding(new TriggerBinding(Group, "deleteSelectedVertex", DeleteSelectedVertex));
-            AddBinding(new TriggerBinding(Group, "clearAndSeedDefault", ClearAndSeedDefault));
-            AddBinding(new TriggerBinding<bool>(Group, "setShowVanillaUnlockedMapTileBorders", SetShowVanillaUnlockedMapTileBorders));
-            AddBinding(new TriggerBinding<string, int>(Group, "setParcelAppearanceValue", SetParcelAppearanceValue));
+            AddBinding(new TriggerBinding(Group, "addRectangle", () => RunTrigger("addRectangle", AddRectangle)));
+            AddBinding(new TriggerBinding<string>(Group, "selectParcel", idText => RunTrigger("selectParcel", () => SelectParcel(idText))));
+            AddBinding(new TriggerBinding<int>(Group, "selectVertex", index => RunTrigger("selectVertex", () => SelectVertex(index))));
+            AddBinding(new TriggerBinding<int>(Group, "selectNextParcel", direction => RunTrigger("selectNextParcel", () => SelectNextParcel(direction))));
+            AddBinding(new TriggerBinding<string>(Group, "renameSelectedParcel", name => RunTrigger("renameSelectedParcel", () => RenameSelectedParcel(name))));
+            AddBinding(new TriggerBinding(Group, "deleteSelectedParcel", () => RunTrigger("deleteSelectedParcel", DeleteSelectedParcel)));
+            AddBinding(new TriggerBinding<string>(Group, "mergeSelectedParcelWith", idText => RunTrigger("mergeSelectedParcelWith", () => MergeSelectedParcelWith(idText))));
+            AddBinding(new TriggerBinding<bool>(Group, "setParcelEditToolActive", active => RunTrigger("setParcelEditToolActive", () => SetParcelEditToolActive(active))));
+            AddBinding(new TriggerBinding<float2>(Group, "moveSelectedParcel", delta => RunTrigger("moveSelectedParcel", () => MoveSelectedParcel(delta))));
+            AddBinding(new TriggerBinding<float2>(Group, "moveSelectedVertex", delta => RunTrigger("moveSelectedVertex", () => MoveSelectedVertex(delta))));
+            AddBinding(new TriggerBinding(Group, "insertVertexAfterSelected", () => RunTrigger("insertVertexAfterSelected", InsertVertexAfterSelected)));
+            AddBinding(new TriggerBinding(Group, "deleteSelectedVertex", () => RunTrigger("deleteSelectedVertex", DeleteSelectedVertex)));
+            AddBinding(new TriggerBinding(Group, "clearAndSeedDefault", () => RunTrigger("clearAndSeedDefault", ClearAndSeedDefault)));
+            AddBinding(new TriggerBinding<bool>(Group, "setShowVanillaUnlockedMapTileBorders", show => RunTrigger("setShowVanillaUnlockedMapTileBorders", () => SetShowVanillaUnlockedMapTileBorders(show))));
+            AddBinding(new TriggerBinding<string, int>(Group, "setParcelAppearanceValue", (key, value) => RunTrigger("setParcelAppearanceValue", () => SetParcelAppearanceValue(key, value))));
 
             Mod.log.Info($"ParcelUISystem enabled. Binding group='{Group}', {_mParcelStoreSystem.GetSummary()}.");
         }
@@ -106,18 +107,58 @@ namespace CustomLandParcel.Systems
         [Preserve]
         protected override void OnUpdate()
         {
-            base.OnUpdate();
-            if (_mLastLoggedVersion != _mParcelStoreSystem.Version)
+            try
             {
-                _mLastLoggedVersion = _mParcelStoreSystem.Version;
-                _mParcelsBinding.Update();
-                Mod.log.Info($"ParcelUISystem observed store change: {_mParcelStoreSystem.GetSummary()}.");
+                base.OnUpdate();
+                if (_mLastLoggedVersion != _mParcelStoreSystem.Version)
+                {
+                    _mLastLoggedVersion = _mParcelStoreSystem.Version;
+                    _mParcelsBinding.Update();
+                    Mod.log.Info($"ParcelUISystem observed store change: {_mParcelStoreSystem.GetSummary()}.");
+                }
+            }
+            catch (Exception exception)
+            {
+                LogUpdateException(exception);
             }
         }
 
         private void BindParcels(IJsonWriter writer)
         {
-            ParcelUIWriter.WriteParcels(writer, _mParcelStoreSystem.Store);
+            try
+            {
+                ParcelUIWriter.WriteParcels(writer, _mParcelStoreSystem.Store);
+            }
+            catch (Exception exception)
+            {
+                Mod.log.Error(exception, $"Parcel UI binding 'parcels' failed; returning an empty array. {_mParcelStoreSystem.GetSummary()}.");
+                writer.ArrayBegin(0);
+                writer.ArrayEnd();
+            }
+        }
+
+        private void RunTrigger(string triggerName, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                Mod.log.Error(exception, $"Parcel UI trigger '{triggerName}' failed and was isolated. {_mParcelStoreSystem.GetSummary()}.");
+            }
+        }
+
+        private void LogUpdateException(Exception exception)
+        {
+            if (_mUpdateExceptionLogCooldownFrames > 0)
+            {
+                _mUpdateExceptionLogCooldownFrames--;
+                return;
+            }
+
+            _mUpdateExceptionLogCooldownFrames = 300;
+            Mod.log.Error(exception, $"ParcelUISystem update failed and was isolated. {_mParcelStoreSystem.GetSummary()}.");
         }
 
         private void AddRectangle()

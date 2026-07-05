@@ -20,6 +20,7 @@ export function ParcelRow({
 }): JSX.Element {
   const activeTarget = parcel.id === mergeTargetId;
   const isLocked = parcel.state === "Locked";
+  const pointCount = Array.isArray(parcel.points) ? parcel.points.length : 0;
   const parcelColor = `rgba(${parcel.boundaryRed}, ${parcel.boundaryGreen}, ${parcel.boundaryBlue}, ${Math.max(0.18, parcel.boundaryOpacity / 100)})`;
 
   return (
@@ -67,7 +68,7 @@ export function ParcelRow({
           </div>
           <div style={{ ...rowStyle, color: colors.muted, fontSize: "9rem" }}>
             <span>{formatArea(parcel.area)}</span>
-            <span>{parcel.points.length} pts</span>
+            <span>{pointCount} pts</span>
             <span>{parcel.boundaryWidth}px</span>
           </div>
         </div>

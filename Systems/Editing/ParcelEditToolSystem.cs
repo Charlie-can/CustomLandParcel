@@ -33,6 +33,7 @@ namespace CustomLandParcel.Systems
         private float2 _mLastDragPosition;
         private ParcelEditHit _mPointerDownHit;
         private int _mHoverLogCooldownFrames;
+        private int _mExceptionLogCooldownFrames;
 
         internal ParcelEditSession Session { get; } = new ParcelEditSession();
 
@@ -50,20 +51,28 @@ namespace CustomLandParcel.Systems
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            EnableToolActions();
-            if (!TryGetCursorPosition(out var cursorPosition))
+            try
             {
-                if (Session.IsDrawing || Session.IsDragging)
+                EnableToolActions();
+                if (!TryGetCursorPosition(out var cursorPosition))
                 {
-                    Mod.log.Warn($"Parcel edit tool raycast failed while active. {Session.GetSummary()}.");
+                    if (Session.IsDrawing || Session.IsDragging)
+                    {
+                        Mod.log.Warn($"Parcel edit tool raycast failed while active. {Session.GetSummary()}.");
+                    }
+
+                    return inputDeps;
                 }
 
+                UpdateHover(cursorPosition);
+                HandleInput(cursorPosition);
                 return inputDeps;
             }
-
-            UpdateHover(cursorPosition);
-            HandleInput(cursorPosition);
-            return inputDeps;
+            catch (Exception exception)
+            {
+                DisableAfterException(exception);
+                return inputDeps;
+            }
         }
 
         public override PrefabBase GetPrefab()
@@ -333,6 +342,27 @@ namespace CustomLandParcel.Systems
             Session.Cancel();
             _mPointerDown = false;
             _mDragStarted = false;
+        }
+
+        private void DisableAfterException(Exception exception)
+        {
+            Session.Cancel();
+            _mPointerDown = false;
+            _mDragStarted = false;
+
+            if (IsToolActive)
+            {
+                m_ToolSystem.activeTool = m_DefaultToolSystem;
+            }
+
+            if (_mExceptionLogCooldownFrames > 0)
+            {
+                _mExceptionLogCooldownFrames--;
+                return;
+            }
+
+            _mExceptionLogCooldownFrames = 300;
+            Mod.log.Error(exception, $"ParcelEditToolSystem update failed; current edit operation was canceled and the tool was deactivated. {_mParcelStoreSystem.GetSummary()}.");
         }
 
         private ParcelEditHit GetDraftCloseHit(float2 cursorPosition)

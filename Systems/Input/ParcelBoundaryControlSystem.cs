@@ -1,4 +1,5 @@
 ﻿using Game;
+using System;
 using Game.Input;
 using Unity.Mathematics;
 
@@ -29,6 +30,7 @@ namespace CustomLandParcel.Systems
         private bool _mEditMode;
         private int _mEditActionCooldownFrames;
         private int _mFramesUntilLog;
+        private int _mExceptionLogCooldownFrames;
 
         protected override void OnCreate()
         {
@@ -39,6 +41,19 @@ namespace CustomLandParcel.Systems
         }
 
         protected override void OnUpdate()
+        {
+            try
+            {
+                OnUpdateSafe();
+            }
+            catch (Exception exception)
+            {
+                _mEditMode = false;
+                LogUpdateException(exception);
+            }
+        }
+
+        private void OnUpdateSafe()
         {
             if (Mod.Settings == null)
             {
@@ -119,6 +134,18 @@ namespace CustomLandParcel.Systems
             }
 
             _mFramesUntilLog--;
+        }
+
+        private void LogUpdateException(Exception exception)
+        {
+            if (_mExceptionLogCooldownFrames > 0)
+            {
+                _mExceptionLogCooldownFrames--;
+                return;
+            }
+
+            _mExceptionLogCooldownFrames = 300;
+            Mod.log.Error(exception, $"ParcelBoundaryControlSystem update failed and edit mode was disabled. {_mParcelStoreSystem.GetSummary()}.");
         }
 
         private static bool WasPressed(string actionName)

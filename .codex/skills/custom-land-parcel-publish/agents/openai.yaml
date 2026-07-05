@@ -1,0 +1,4 @@
+interface:
+  display_name: "Custom Land Parcel Publish"
+  short_description: "Release Custom Land Parcel safely."
+  default_prompt: "Publish a new Custom Land Parcel version after local verification."

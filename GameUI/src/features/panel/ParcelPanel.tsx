@@ -12,7 +12,7 @@ import {
 import { MovePad } from "components/MovePad";
 import { PanelButton } from "components/PanelButton";
 import { Section } from "components/Section";
-import { SelectedParcel } from "domain";
+import { Parcel, Point, SelectedParcel } from "domain";
 import { AppearanceControls } from "features/appearance/AppearanceControls";
 import { MergeConfirm } from "features/parcels/MergeConfirm";
 import { ParcelRow } from "features/parcels/ParcelRow";
@@ -24,12 +24,14 @@ const maxStep = 10000;
 const stepOptions = [1, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, maxStep];
 
 export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void }): JSX.Element {
-  const parcels = useValue(parcelsBinding) || [];
+  const rawParcels = useValue(parcelsBinding);
+  const parcels = useMemo(() => normalizeParcels(rawParcels), [rawParcels]);
   const selectedParcelId = useValue(selectedParcelIdBinding);
   const selectedVertexIndex = useValue(selectedVertexIndexBinding);
   const editToolActive = useValue(editToolActiveBinding);
-  const [step, setStep] = useState(100);
+  const [stepIndex, setStepIndex] = useState(stepOptions.indexOf(100));
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+  const step = stepOptions[stepIndex] || 100;
 
   const selected = useMemo<SelectedParcel | null>(() => {
     const found = parcels.find((parcel) => parcel.id === selectedParcelId) || parcels.find((parcel) => parcel.selected);
@@ -76,7 +78,7 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
             {selected
               ? t("summary.selected", {
                   count: parcels.length,
-                  points: selected.points.length,
+                  points: selected.points?.length || 0,
                   vertex: selected.selectedVertexIndex + 1,
                 })
               : `${parcels.length} ${t("section.parcels")} / ${t("summary.none")}`}
@@ -178,20 +180,38 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
             }}
             onMove={moveSelectedParcel}
           />
-          <label style={{ ...rowStyle, gap: "5rem", color: colors.muted, fontSize: "10rem", flex: "0 0 auto" }}>
+          <div style={{ ...rowStyle, gap: "5rem", color: colors.muted, fontSize: "10rem", flex: "0 0 auto" }}>
             <span style={{ width: "24rem" }}>{t("move.step")}</span>
-            <select
-              style={{ ...inputStyle, width: "76rem", flex: "0 0 auto" }}
-              value={step}
-              onChange={(event) => setStep(clampStep(Number(event.currentTarget.value)))}
-            >
-              {stepOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div style={{ ...rowStyle, gap: "3rem", flex: "0 0 auto" }}>
+              <PanelButton
+                disabled={stepIndex <= 0}
+                style={{ width: "24rem", minHeight: "24rem", padding: 0, flex: "0 0 auto" }}
+                onSelect={() => setStepIndex((value) => Math.max(0, value - 1))}
+              >
+                -
+              </PanelButton>
+              <span
+                style={{
+                  ...inputStyle,
+                  width: "52rem",
+                  minHeight: "24rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flex: "0 0 auto",
+                }}
+              >
+                {step}
+              </span>
+              <PanelButton
+                disabled={stepIndex >= stepOptions.length - 1}
+                style={{ width: "24rem", minHeight: "24rem", padding: 0, flex: "0 0 auto" }}
+                onSelect={() => setStepIndex((value) => Math.min(stepOptions.length - 1, value + 1))}
+              >
+                +
+              </PanelButton>
+            </div>
+          </div>
         </div>
       </Section>
 
@@ -230,6 +250,43 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
   );
 }
 
-function clampStep(value: number): number {
-  return Math.max(1, Math.min(maxStep, Math.floor(value) || 1));
+function normalizeParcels(value: unknown): Parcel[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((parcel) => {
+    const typed = parcel as Partial<Parcel>;
+    return {
+      ...typed,
+      id: String(typed.id || ""),
+      name: String(typed.name || ""),
+      state: String(typed.state || "Purchased"),
+      price: Number(typed.price) || 0,
+      area: Number(typed.area) || 0,
+      selected: Boolean(typed.selected),
+      boundaryRed: Number(typed.boundaryRed) || 51,
+      boundaryGreen: Number(typed.boundaryGreen) || 255,
+      boundaryBlue: Number(typed.boundaryBlue) || 148,
+      boundaryOpacity: Number(typed.boundaryOpacity) || 90,
+      fillOpacity: Number(typed.fillOpacity) || 28,
+      boundaryWidth: Number(typed.boundaryWidth) || 7,
+      points: normalizePoints(typed.points),
+    };
+  });
+}
+
+function normalizePoints(value: unknown): Point[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((point) => {
+    if (Array.isArray(point)) {
+      return { x: Number(point[0]) || 0, y: Number(point[1]) || 0 };
+    }
+
+    const typed = point as Partial<Point>;
+    return { x: Number(typed.x) || 0, y: Number(typed.y) || 0 };
+  });
 }
