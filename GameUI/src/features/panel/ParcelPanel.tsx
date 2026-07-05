@@ -18,7 +18,7 @@ import { MergeConfirm } from "features/parcels/MergeConfirm";
 import { ParcelRow } from "features/parcels/ParcelRow";
 import { VertexList } from "features/vertices/VertexList";
 import { Translator } from "i18n";
-import { colors, columnStyle, inputStyle, rowStyle } from "styles";
+import { colors, columnStyle, inputStyle, rowStyle, toolSurfaceStyle } from "styles";
 
 export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void }): JSX.Element {
   const parcels = useValue(parcelsBinding) || [];
@@ -120,38 +120,41 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </Section>
 
       <Section title={t("section.selected")}>
-        <div style={{ ...rowStyle, alignItems: "stretch", flexWrap: "wrap" }}>
-          <input
-            style={{ ...inputStyle, minHeight: "24rem", flex: "1 1 190rem" }}
-            value={selected ? selected.name : ""}
-            disabled={!selected}
-            onChange={(event) => selected && send("renameSelectedParcel", event.currentTarget.value)}
-            title={t("selected.rename")}
-          />
-          {selected && (
-            <div
-              style={{
-                width: "30rem",
-                height: "24rem",
-                flex: "0 0 auto",
-                background: `rgba(${selected.boundaryRed}, ${selected.boundaryGreen}, ${selected.boundaryBlue}, ${Math.max(0.2, selected.boundaryOpacity / 100)})`,
-                border: "1rem solid rgba(235, 248, 255, 0.56)",
-                borderRadius: "4rem",
-              }}
+        <div style={{ ...toolSurfaceStyle, ...columnStyle, gap: "5rem" }}>
+          <div style={{ ...rowStyle, alignItems: "stretch", flexWrap: "wrap" }}>
+            {selected && (
+              <div
+                style={{
+                  width: "24rem",
+                  minHeight: "24rem",
+                  flex: "0 0 auto",
+                  background: `rgba(${selected.boundaryRed}, ${selected.boundaryGreen}, ${selected.boundaryBlue}, ${Math.max(0.2, selected.boundaryOpacity / 100)})`,
+                  border: "1rem solid rgba(235, 248, 255, 0.56)",
+                  borderRadius: "4rem",
+                  boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.24)",
+                }}
+              />
+            )}
+            <input
+              style={{ ...inputStyle, minHeight: "24rem", flex: "1 1 160rem" }}
+              value={selected ? selected.name : ""}
+              disabled={!selected}
+              onChange={(event) => selected && send("renameSelectedParcel", event.currentTarget.value)}
+              title={t("selected.rename")}
             />
-          )}
-        </div>
-        <MergeConfirm selected={selected} target={mergeTarget} t={t} onCancel={() => setMergeTargetId(null)} />
-        <div style={{ ...rowStyle, alignItems: "stretch", flexWrap: "wrap" }}>
-          <PanelButton style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("selectNextParcel", -1)}>
-            {t("action.prev")}
-          </PanelButton>
-          <PanelButton style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("selectNextParcel", 1)}>
-            {t("action.next")}
-          </PanelButton>
-          <PanelButton tone="danger" style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("deleteSelectedParcel")}>
-            {t("action.delete")}
-          </PanelButton>
+          </div>
+          <MergeConfirm selected={selected} target={mergeTarget} t={t} onCancel={() => setMergeTargetId(null)} />
+          <div style={{ ...rowStyle, alignItems: "stretch", flexWrap: "wrap" }}>
+            <PanelButton style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("selectNextParcel", -1)}>
+              {t("action.prev")}
+            </PanelButton>
+            <PanelButton style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("selectNextParcel", 1)}>
+              {t("action.next")}
+            </PanelButton>
+            <PanelButton tone="danger" style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("deleteSelectedParcel")}>
+              {t("action.delete")}
+            </PanelButton>
+          </div>
         </div>
       </Section>
 
@@ -160,7 +163,7 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </Section>
 
       <Section title={t("section.move")}>
-        <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <div style={{ ...toolSurfaceStyle, ...rowStyle, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
           <MovePad
             disabled={!selected}
             step={step}
@@ -172,10 +175,10 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
             }}
             onMove={moveSelectedParcel}
           />
-          <label style={{ ...columnStyle, gap: "3rem", color: colors.muted, fontSize: "10rem", width: "76rem" }}>
-            {t("move.step")}
+          <label style={{ ...rowStyle, gap: "5rem", color: colors.muted, fontSize: "10rem", flex: "0 0 auto" }}>
+            <span style={{ width: "24rem" }}>{t("move.step")}</span>
             <input
-              style={{ ...inputStyle, width: "100%", flex: "0 0 auto" }}
+              style={{ ...inputStyle, width: "62rem", flex: "0 0 auto" }}
               type="number"
               value={step}
               min={1}
@@ -186,26 +189,33 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </Section>
 
       <Section title={t("section.vertices")}>
-        <VertexList selected={selected} t={t} />
-        <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
-          <MovePad
-            disabled={!selected}
-            step={step}
-            labels={{
-              north: t("move.north"),
-              south: t("move.south"),
-              west: t("move.west"),
-              east: t("move.east"),
-            }}
-            onMove={moveSelectedVertex}
-          />
-          <div style={{ ...rowStyle, flex: "1 1 140rem", flexWrap: "wrap" }}>
-            <PanelButton disabled={!selected} onSelect={() => send("insertVertexAfterSelected")}>
-              {t("action.insertVertex")}
-            </PanelButton>
-            <PanelButton tone="danger" disabled={!selected} onSelect={() => send("deleteSelectedVertex")}>
-              {t("action.deleteVertex")}
-            </PanelButton>
+        <div style={{ ...toolSurfaceStyle, ...columnStyle, gap: "6rem" }}>
+          <VertexList selected={selected} t={t} />
+          <div style={{ ...rowStyle, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <MovePad
+              disabled={!selected}
+              step={step}
+              labels={{
+                north: t("move.north"),
+                south: t("move.south"),
+                west: t("move.west"),
+                east: t("move.east"),
+              }}
+              onMove={moveSelectedVertex}
+            />
+            <div style={{ ...rowStyle, flex: "1 1 150rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <PanelButton disabled={!selected} style={{ flex: "1 1 74rem" }} onSelect={() => send("insertVertexAfterSelected")}>
+                {t("action.insertVertex")}
+              </PanelButton>
+              <PanelButton
+                tone="danger"
+                disabled={!selected}
+                style={{ flex: "1 1 74rem" }}
+                onSelect={() => send("deleteSelectedVertex")}
+              >
+                {t("action.deleteVertex")}
+              </PanelButton>
+            </div>
           </div>
         </div>
       </Section>

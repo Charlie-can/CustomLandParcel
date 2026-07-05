@@ -12,7 +12,7 @@ import {
   showVanillaUnlockedMapTileBordersBinding,
 } from "bindings";
 import { Translator } from "i18n";
-import { colors, columnStyle, rowStyle } from "styles";
+import { colors, columnStyle, rowStyle, toolSurfaceStyle } from "styles";
 
 const colorPresets = [
   { label: "Mint", red: 51, green: 255, blue: 148 },
@@ -34,14 +34,13 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
   const alphaValue = Math.round(opacity * 2.55);
 
   return (
-    <div style={{ ...columnStyle, gap: "5rem" }}>
+    <div style={{ ...columnStyle, gap: "4rem" }}>
       <div
         style={{
           ...rowStyle,
           justifyContent: "space-between",
           alignItems: "center",
-          minHeight: "24rem",
-          padding: "0 2rem",
+          minHeight: "20rem",
         }}
       >
         <label style={{ ...rowStyle, gap: "5rem", color: colors.text, fontSize: "10rem", minWidth: 0 }}>
@@ -55,27 +54,30 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
       </div>
       <div
         style={{
-          display: "flex",
-          alignItems: "stretch",
-          gap: "7rem",
-          padding: "7rem",
-          background: "rgba(8, 17, 22, 0.42)",
-          border: "1rem solid rgba(170, 205, 218, 0.2)",
-          borderRadius: "4rem",
+          ...toolSurfaceStyle,
+          ...columnStyle,
+          gap: "6rem",
         }}
       >
-        <div style={{ ...columnStyle, gap: "5rem", flex: "0 0 58rem", minWidth: 0 }}>
+        <div style={{ ...rowStyle, alignItems: "center", minWidth: 0 }}>
           <div
             style={{
-              width: "48rem",
-              height: "48rem",
+              width: "34rem",
+              height: "34rem",
+              flex: "0 0 auto",
               background: swatchColor,
               border: "2rem solid rgba(235, 248, 255, 0.82)",
               borderRadius: "4rem",
               boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.26), 0 4rem 12rem rgba(0, 0, 0, 0.28)",
             }}
           />
-          <div style={{ ...rowStyle, flexWrap: "wrap", gap: "3rem" }}>
+          <div style={{ ...columnStyle, gap: "1rem", flex: "1 1 auto", minWidth: 0 }}>
+            <span style={{ color: colors.text, fontSize: "10rem", fontWeight: 900 }}>{t("appearance.color")}</span>
+            <span style={{ color: colors.muted, fontSize: "8.5rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              rgba({red}, {green}, {blue}, {alphaValue})
+            </span>
+          </div>
+          <div style={{ ...rowStyle, flexWrap: "wrap", justifyContent: "flex-end", gap: "3rem", maxWidth: "82rem" }}>
             {colorPresets.map((preset) => (
               <button
                 key={preset.label}
@@ -98,13 +100,7 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
             ))}
           </div>
         </div>
-        <div style={{ ...columnStyle, gap: "4rem", flex: "1 1 auto", minWidth: 0 }}>
-          <div style={{ ...rowStyle, justifyContent: "space-between", minHeight: "13rem" }}>
-            <span style={{ color: colors.text, fontSize: "10rem", fontWeight: 900 }}>{t("appearance.color")}</span>
-            <span style={{ color: colors.muted, fontSize: "8.5rem" }}>
-              rgba({red}, {green}, {blue}, {alphaValue})
-            </span>
-          </div>
+        <div style={{ ...columnStyle, gap: "4rem", minWidth: 0 }}>
           <DragSlider
             label="R"
             labelWidth="12rem"
@@ -146,12 +142,9 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
       </div>
       <div
         style={{
+          ...toolSurfaceStyle,
           ...columnStyle,
           gap: "4rem",
-          padding: "6rem 7rem",
-          background: "rgba(232, 246, 255, 0.045)",
-          border: `1rem solid ${colors.border}`,
-          borderRadius: "4rem",
         }}
       >
         <DragSlider
@@ -228,7 +221,7 @@ function DragSlider({
   }, [dragging, updateFromClientX]);
 
   return (
-    <div style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "9rem" }}>
+    <div style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "9rem", minHeight: "16rem" }}>
       <span style={{ width: labelWidth, color: colors.text, fontWeight: 800 }}>{label}</span>
       <div
         ref={trackRef}
@@ -245,7 +238,7 @@ function DragSlider({
           position: "relative",
           flex: "1 1 auto",
           minWidth: "92rem",
-          height: "11rem",
+          height: "9rem",
           background: trackBackground,
           border: "1rem solid rgba(215, 232, 240, 0.42)",
           borderRadius: "3rem",
@@ -257,9 +250,9 @@ function DragSlider({
             position: "absolute",
             left: `${percent}%`,
             top: "-3rem",
-            width: "7rem",
-            height: "16rem",
-            marginLeft: "-4rem",
+            width: "6rem",
+            height: "14rem",
+            marginLeft: "-3rem",
             background: "rgba(245, 250, 255, 0.96)",
             border: "1rem solid rgba(0, 0, 0, 0.45)",
             borderRadius: "2rem",

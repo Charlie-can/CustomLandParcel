@@ -21,13 +21,20 @@ export const colors = {
 export const rowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "6rem",
+  gap: "5rem",
 };
 
 export const columnStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "6rem",
+  gap: "5rem",
+};
+
+export const toolSurfaceStyle: React.CSSProperties = {
+  padding: "6rem",
+  background: "rgba(8, 16, 21, 0.42)",
+  border: `1rem solid ${colors.border}`,
+  borderRadius: "4rem",
 };
 
 export const inputStyle: React.CSSProperties = {
