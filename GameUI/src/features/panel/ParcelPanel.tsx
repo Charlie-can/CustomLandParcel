@@ -20,12 +20,15 @@ import { VertexList } from "features/vertices/VertexList";
 import { Translator } from "i18n";
 import { colors, columnStyle, inputStyle, rowStyle, toolSurfaceStyle } from "styles";
 
+const maxStep = 10000;
+
 export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void }): JSX.Element {
   const parcels = useValue(parcelsBinding) || [];
   const selectedParcelId = useValue(selectedParcelIdBinding);
   const selectedVertexIndex = useValue(selectedVertexIndexBinding);
   const editToolActive = useValue(editToolActiveBinding);
   const [step, setStep] = useState(100);
+  const [stepText, setStepText] = useState("100");
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
 
   const selected = useMemo<SelectedParcel | null>(() => {
@@ -179,10 +182,19 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
             <span style={{ width: "24rem" }}>{t("move.step")}</span>
             <input
               style={{ ...inputStyle, width: "62rem", flex: "0 0 auto" }}
-              type="number"
-              value={step}
-              min={1}
-              onChange={(event) => setStep(Math.max(1, Number(event.currentTarget.value) || 1))}
+              value={stepText}
+              onChange={(event) => {
+                const digits = event.currentTarget.value.replace(/[^0-9]/g, "");
+                setStepText(digits);
+                if (digits.length > 0) {
+                  setStep(clampStep(Number(digits)));
+                }
+              }}
+              onBlur={() => {
+                const normalizedStep = clampStep(step);
+                setStep(normalizedStep);
+                setStepText(String(normalizedStep));
+              }}
             />
           </label>
         </div>
@@ -221,4 +233,8 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </Section>
     </div>
   );
+}
+
+function clampStep(value: number): number {
+  return Math.max(1, Math.min(maxStep, Math.floor(value) || 1));
 }

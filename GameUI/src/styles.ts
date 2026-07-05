@@ -69,7 +69,7 @@ export const launcherButtonStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   color: colors.text,
-  background: colors.primary,
+  background: "#4bc3f1",
   border: "1rem solid rgba(255, 255, 255, 0.22)",
   borderRadius: "5rem",
   fontSize: "14rem",
