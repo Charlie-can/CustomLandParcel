@@ -31,6 +31,8 @@
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" Condition="!Exists('$(CSII_TOOLPATH)\Mod.targets')" />
 
 	<ItemGroup>
+		<PackageReference Include="Lib.Harmony" Version="2.3.3" IncludeAssets="none" PrivateAssets="all" GeneratePathProperty="true" />
+
 		<Reference Include="Game">
 			<Private>false</Private>
 		</Reference>
@@ -105,6 +107,10 @@
 		<Exec WorkingDirectory="$(CustomLandParcelUIDir)" Command="&quot;$(NodeExe)&quot; &quot;$(CustomLandParcelUIDir)\node_modules\webpack\bin\webpack.js&quot; --config webpack.config.js" />
 	</Target>
 
+	<Target Name="RemoveHarmonyFromPostProcessorInput" BeforeTargets="RunModPostProcessor" Condition="'$(NeedBuild)'">
+		<Delete Files="$(OutDir)\0Harmony.dll" TreatErrorsAsWarnings="true" />
+	</Target>
+
 	<Target Name="DeployCustomLandParcelUI" AfterTargets="DeployWIP" Condition="'$(NeedBuild)' And '$(UserDataFullPath)' != ''">
 		<PropertyGroup>
 			<CustomLandParcelUIDeployDir>$(UserDataFullPath)\Mods\CustomLandParcelUI</CustomLandParcelUIDeployDir>
@@ -117,6 +123,15 @@
 		<RemoveDir Directories="$(CustomLandParcelUIDeployDir)" />
 		<MakeDir Directories="$(CustomLandParcelUIDeployDir)" />
 		<Copy SourceFiles="@(CustomLandParcelUIFiles)" DestinationFiles="@(CustomLandParcelUIFiles->'$(CustomLandParcelUIDeployDir)\%(RecursiveDir)%(Filename)%(Extension)')" />
+	</Target>
+
+	<Target Name="DeployHarmonyDependency" AfterTargets="DeployWIP" Condition="'$(NeedBuild)' And '$(UserDataFullPath)' != ''">
+		<PropertyGroup>
+			<HarmonyDependencyPath>$(PkgLib_Harmony)\lib\net48\0Harmony.dll</HarmonyDependencyPath>
+			<CustomLandParcelDeployDir>$(UserDataFullPath)\Mods\CustomLandParcel</CustomLandParcelDeployDir>
+		</PropertyGroup>
+		<Message Text="Copy Harmony dependency to $(CustomLandParcelDeployDir)" Importance="high" />
+		<Copy SourceFiles="$(HarmonyDependencyPath)" DestinationFolder="$(CustomLandParcelDeployDir)" Condition="Exists('$(HarmonyDependencyPath)')" />
 	</Target>
 
 </Project>

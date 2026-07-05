@@ -144,12 +144,6 @@ namespace CustomLandParcel.Compatibility
 
         private void RefreshUnlockedMapTiles(float2 parcelMin, float2 parcelMax)
         {
-            if (!ShouldShowVanillaUnlockedMapTileBorders())
-            {
-                UnlockAllMapTilesForHiddenCityBoundary(parcelMin, parcelMax);
-                return;
-            }
-
             var unlocked = 0;
             var locked = 0;
             var alreadyUnlockedByParcel = 0;
@@ -188,42 +182,6 @@ namespace CustomLandParcel.Compatibility
             {
                 Mod.log.Info(
                     $"Parcel map tile ownership synchronized: unlockedInside={unlocked}, lockedOutside={locked}, overlapCandidates={overlapCandidates}, alreadyUnlockedByParcel={alreadyUnlockedByParcel}, alreadyVanillaOwnedInside={alreadyVanillaOwned}, mapTileCandidates={entities.Length}, buildableBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, showVanillaBorders={ShouldShowVanillaUnlockedMapTileBorders()}, {_mParcelStoreSystem.GetSummary()}.");
-            }
-        }
-
-        private void UnlockAllMapTilesForHiddenCityBoundary(float2 parcelMin, float2 parcelMax)
-        {
-            var unlocked = 0;
-            var alreadyUnlockedByParcel = 0;
-            var alreadyVanillaOwned = 0;
-            var overlapCandidates = 0;
-            using var entities = _mVanillaMapTileQuery.ToEntityArray(Allocator.Temp);
-            for (var i = 0; i < entities.Length; i++)
-            {
-                var entity = entities[i];
-                if (TileOverlapsBuildableParcel(entity, parcelMin, parcelMax))
-                {
-                    overlapCandidates++;
-                }
-
-                switch (_mOwnershipSync.ApplyBuildableOwnership(entity))
-                {
-                    case VanillaMapTileOwnershipResult.AlreadyUnlockedByParcel:
-                        alreadyUnlockedByParcel++;
-                        break;
-                    case VanillaMapTileOwnershipResult.AlreadyVanillaOwned:
-                        alreadyVanillaOwned++;
-                        break;
-                    case VanillaMapTileOwnershipResult.UnlockedByParcel:
-                        unlocked++;
-                        break;
-                }
-            }
-
-            if (unlocked > 0)
-            {
-                Mod.log.Info(
-                    $"Parcel map tile ownership synchronized for hidden city boundary mesh: unlockedAll={unlocked}, overlapCandidates={overlapCandidates}, alreadyUnlockedByParcel={alreadyUnlockedByParcel}, alreadyVanillaOwned={alreadyVanillaOwned}, mapTileCandidates={entities.Length}, buildableBounds={ParcelGeometry.Format(parcelMin)}..{ParcelGeometry.Format(parcelMax)}, showVanillaBorders=False, {_mParcelStoreSystem.GetSummary()}.");
             }
         }
 

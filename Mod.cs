@@ -1,5 +1,6 @@
 ﻿using Colossal.Logging;
 using CustomLandParcel.Compatibility;
+using CustomLandParcel.Patches;
 using Game;
 using Game.Modding;
 using Game.SceneFlow;
@@ -23,6 +24,7 @@ namespace CustomLandParcel
             Settings.RegisterInOptionsUI();
             Settings.RegisterKeyBindings();
             log.Info("Registered CustomLandParcel settings, localization, and keybindings in the game options UI.");
+            CustomLandParcelPatcher.Apply();
 
             updateSystem.UpdateAt<ParcelStoreSystem>(SystemUpdatePhase.Serialize);
             updateSystem.UpdateAt<VanillaMapTileUnlockSystem>(SystemUpdatePhase.PreTool);
@@ -46,6 +48,7 @@ namespace CustomLandParcel
         public void OnDispose()
         {
             log.Info(nameof(OnDispose));
+            CustomLandParcelPatcher.Unapply();
             Settings?.UnregisterInOptionsUI();
             CustomLandParcelLocalization.Unregister();
             Settings = null;
