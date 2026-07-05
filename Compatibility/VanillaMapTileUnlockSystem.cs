@@ -18,22 +18,7 @@ namespace CustomLandParcel.Compatibility
     public partial class VanillaMapTileUnlockSystem : GameSystemBase
     {
         private const int UnlockMaskRefreshFrames = 15;
-
-        public struct VanillaMapTileBlocker : IComponentData
-        {
-        }
-
-        public struct VanillaMapTileUnlockedByParcel : IComponentData
-        {
-        }
-
-        public struct VanillaMapTileLockedByParcel : IComponentData
-        {
-        }
-
-        public struct VanillaMapTileHiddenByParcelSetting : IComponentData
-        {
-        }
+        private const int InitialVanillaBoundsRetryFrames = 300;
 
         private EntityQuery _mVanillaMapTileQuery;
         private EntityQuery _mLegacyBlockerQuery;
@@ -45,6 +30,7 @@ namespace CustomLandParcel.Compatibility
         private bool _mLastCompatibilityEnabled;
         private bool _mLegacyBlockersChecked;
         private bool _mInitialVanillaBoundsChecked;
+        private int _mInitialVanillaBoundsAttempts;
         private int _mDisabledLogCooldownFrames;
 
         protected override void OnCreate()
@@ -143,7 +129,7 @@ namespace CustomLandParcel.Compatibility
             }
 
             RestoreMapTileVisibility("no buildable custom parcel union");
-            LockAllUnownedMapTilesOutsideCustomParcels("no buildable custom parcel union");
+            RestoreLockedMapTiles("no buildable custom parcel union");
             RestoreUnlockedMapTiles("no buildable custom parcel union");
         }
 
@@ -303,24 +289,6 @@ namespace CustomLandParcel.Compatibility
             return unlocked;
         }
 
-        private void LockAllUnownedMapTilesOutsideCustomParcels(string reason)
-        {
-            using var entities = _mVanillaMapTileQuery.ToEntityArray(Allocator.Temp);
-            var locked = 0;
-            for (var i = 0; i < entities.Length; i++)
-            {
-                if (LockMapTileOutsideCustomParcel(entities[i]))
-                {
-                    locked++;
-                }
-            }
-
-            if (locked > 0)
-            {
-                Mod.log.Info($"Locked {locked} vanilla map tile(s) because there is no buildable custom parcel union ({reason}).");
-            }
-        }
-
         private bool RestoreUnlockedMapTile(Entity entity)
         {
             if (!EntityManager.Exists(entity) || !EntityManager.HasComponent<VanillaMapTileUnlockedByParcel>(entity))
@@ -368,7 +336,7 @@ namespace CustomLandParcel.Compatibility
                 return;
             }
 
-            _mInitialVanillaBoundsChecked = true;
+            _mInitialVanillaBoundsAttempts++;
             var found = false;
             var min = new float2(float.MaxValue, float.MaxValue);
             var max = new float2(float.MinValue, float.MinValue);
@@ -380,23 +348,32 @@ namespace CustomLandParcel.Compatibility
                     continue;
                 }
 
-                var nodes = EntityManager.GetBuffer<Node>(entity, true);
-                for (var nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
+                if (VanillaMapTileGeometry.TryGetBounds(EntityManager.GetBuffer<Node>(entity, true), out var tileMin, out var tileMax))
                 {
-                    var point = nodes[nodeIndex].m_Position.xz;
-                    min = math.min(min, point);
-                    max = math.max(max, point);
+                    min = math.min(min, tileMin);
+                    max = math.max(max, tileMax);
                     found = true;
                 }
             }
 
             if (!found)
             {
-                Mod.log.Info(
-                    $"Initial vanilla owned MapTile bounds not found; default custom parcel remains unchanged. mapTileCandidates={entities.Length}, {_mParcelStoreSystem.GetSummary()}.");
+                if (_mInitialVanillaBoundsAttempts >= InitialVanillaBoundsRetryFrames)
+                {
+                    _mInitialVanillaBoundsChecked = true;
+                    Mod.log.Warn(
+                        $"Initial vanilla owned MapTile bounds not found after {_mInitialVanillaBoundsAttempts} attempt(s); default custom parcel remains unchanged. mapTileCandidates={entities.Length}, {_mParcelStoreSystem.GetSummary()}.");
+                }
+                else if (_mInitialVanillaBoundsAttempts == 1)
+                {
+                    Mod.log.Info(
+                        $"Initial vanilla owned MapTile bounds not ready yet; retrying. mapTileCandidates={entities.Length}, {_mParcelStoreSystem.GetSummary()}.");
+                }
+
                 return;
             }
 
+            _mInitialVanillaBoundsChecked = true;
             var changed = _mParcelStoreSystem.TryAlignDefaultParcelToBounds(
                 min,
                 max,
@@ -504,128 +481,11 @@ namespace CustomLandParcel.Compatibility
             }
 
             var nodes = EntityManager.GetBuffer<Node>(entity, true);
-            if (nodes.Length == 0)
-            {
-                return false;
-            }
-
-            var tileMin = new float2(float.MaxValue, float.MaxValue);
-            var tileMax = new float2(float.MinValue, float.MinValue);
-            for (var i = 0; i < nodes.Length; i++)
-            {
-                var xz = nodes[i].m_Position.xz;
-                tileMin = math.min(tileMin, xz);
-                tileMax = math.max(tileMax, xz);
-            }
-
-            if (!BoundsIntersect(tileMin, tileMax, parcelMin, parcelMax))
-            {
-                return false;
-            }
-
-            for (var i = 0; i < _mParcelStoreSystem.Parcels.Count; i++)
-            {
-                var parcel = _mParcelStoreSystem.Parcels[i];
-                if (!parcel.IsBuildable || !PolygonMath.TryGetBounds(parcel.Points, out var currentMin, out var currentMax) ||
-                    !BoundsIntersect(tileMin, tileMax, currentMin, currentMax))
-                {
-                    continue;
-                }
-
-                if (PolygonMath.ContainsPoint(parcel.Points, (tileMin + tileMax) * 0.5f))
-                {
-                    return true;
-                }
-
-                for (var nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
-                {
-                    if (PolygonMath.ContainsPoint(parcel.Points, nodes[nodeIndex].m_Position.xz))
-                    {
-                        return true;
-                    }
-                }
-
-                for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
-                {
-                    if (PointInsideBounds(parcel.Points[pointIndex], tileMin, tileMax))
-                    {
-                        return true;
-                    }
-                }
-
-                for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
-                {
-                    var a = parcel.Points[pointIndex];
-                    var b = parcel.Points[(pointIndex + 1) % parcel.Points.Count];
-                    if (SegmentIntersectsBounds(a, b, tileMin, tileMax))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private static bool BoundsIntersect(float2 aMin, float2 aMax, float2 bMin, float2 bMax)
-        {
-            return math.all(aMin <= bMax) && math.all(bMin <= aMax);
-        }
-
-        private static bool PointInsideBounds(float2 point, float2 min, float2 max)
-        {
-            return math.all(point >= min) && math.all(point <= max);
-        }
-
-        private static bool SegmentIntersectsBounds(float2 start, float2 end, float2 min, float2 max)
-        {
-            if (PointInsideBounds(start, min, max) || PointInsideBounds(end, min, max))
-            {
-                return true;
-            }
-
-            var bottomLeft = new float2(min.x, min.y);
-            var topLeft = new float2(min.x, max.y);
-            var topRight = new float2(max.x, max.y);
-            var bottomRight = new float2(max.x, min.y);
-            return SegmentsIntersect(start, end, bottomLeft, topLeft)
-                   || SegmentsIntersect(start, end, topLeft, topRight)
-                   || SegmentsIntersect(start, end, topRight, bottomRight)
-                   || SegmentsIntersect(start, end, bottomRight, bottomLeft);
-        }
-
-        private static bool SegmentsIntersect(float2 a, float2 b, float2 c, float2 d)
-        {
-            const float epsilon = 0.001f;
-            var abC = Cross(a, b, c);
-            var abD = Cross(a, b, d);
-            var cdA = Cross(c, d, a);
-            var cdB = Cross(c, d, b);
-            if (((abC > epsilon && abD < -epsilon) || (abC < -epsilon && abD > epsilon)) &&
-                ((cdA > epsilon && cdB < -epsilon) || (cdA < -epsilon && cdB > epsilon)))
-            {
-                return true;
-            }
-
-            return math.abs(abC) <= epsilon && PointOnSegment(c, a, b)
-                   || math.abs(abD) <= epsilon && PointOnSegment(d, a, b)
-                   || math.abs(cdA) <= epsilon && PointOnSegment(a, c, d)
-                   || math.abs(cdB) <= epsilon && PointOnSegment(b, c, d);
-        }
-
-        private static bool PointOnSegment(float2 point, float2 start, float2 end)
-        {
-            return point.x >= math.min(start.x, end.x) - 0.001f
-                   && point.x <= math.max(start.x, end.x) + 0.001f
-                   && point.y >= math.min(start.y, end.y) - 0.001f
-                   && point.y <= math.max(start.y, end.y) + 0.001f;
-        }
-
-        private static float Cross(float2 origin, float2 a, float2 b)
-        {
-            var oa = a - origin;
-            var ob = b - origin;
-            return oa.x * ob.y - oa.y * ob.x;
+            return VanillaMapTileGeometry.TileOverlapsBuildableParcel(
+                nodes,
+                _mParcelStoreSystem.Parcels,
+                parcelMin,
+                parcelMax);
         }
     }
 }

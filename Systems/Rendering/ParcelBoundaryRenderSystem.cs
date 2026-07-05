@@ -38,7 +38,11 @@ namespace CustomLandParcel.Systems
             var buffer = _mOverlayRenderSystem.GetBuffer(out var dependencies);
             dependencies.Complete();
 
-            DrawParcels(buffer, _mParcelStoreSystem, _mParcelEditToolSystem.Session);
+            DrawParcels(
+                buffer,
+                _mParcelStoreSystem,
+                _mParcelEditToolSystem.Session,
+                _mParcelEditToolSystem.IsToolActive);
             DrawDraft(buffer, _mParcelEditToolSystem.Session);
             _mOverlayRenderSystem.AddBufferWriter(default(JobHandle));
 
@@ -55,14 +59,18 @@ namespace CustomLandParcel.Systems
         private static void DrawParcels(
             OverlayRenderSystem.Buffer buffer,
             ParcelStoreSystem store,
-            ParcelEditSession session)
+            ParcelEditSession session,
+            bool editToolActive)
         {
             const OverlayRenderSystem.StyleFlags style = OverlayRenderSystem.StyleFlags.Projected |
                                                            OverlayRenderSystem.StyleFlags.DepthFadeBelow;
             const float width = 7f;
             const float dashLength = 64f;
             const float gapLength = 48f;
-            var showEditHandles = session.IsDrawing || session.IsDragging || session.Hover.Kind != ParcelEditHitKind.None;
+            var showEditHandles = editToolActive ||
+                                  session.IsDrawing ||
+                                  session.IsDragging ||
+                                  session.Hover.Kind != ParcelEditHitKind.None;
 
             foreach (var parcel in store.Parcels)
             {
