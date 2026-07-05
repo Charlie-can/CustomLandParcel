@@ -43,13 +43,18 @@ namespace CustomLandParcel
             updateSystem.UpdateAt<ParcelBoundaryControlSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateAt<ConstructionRestrictionSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateBefore<ParcelDeletionRestrictionSystem, ToolApplySystem>(SystemUpdatePhase.ApplyTool);
-            updateSystem.UpdateAt<ParcelPlacementDiagnosticsSystem>(SystemUpdatePhase.PostTool);
+            if (Settings.EnablePlacementDiagnostics)
+            {
+                updateSystem.UpdateAt<ParcelPlacementDiagnosticsSystem>(SystemUpdatePhase.PostTool);
+                log.Info("Registered ParcelPlacementDiagnosticsSystem at PostTool because diagnostics are enabled.");
+            }
+
             updateSystem.UpdateAt<VanillaMapTileVisibilitySystem>(SystemUpdatePhase.PreCulling);
             updateSystem.UpdateAt<ConstructionRestrictionPresentationSystem>(SystemUpdatePhase.PreCulling);
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
             updateSystem.UpdateAt<ParcelUISystem>(SystemUpdatePhase.UIUpdate);
             log.Info(
-                "Registered ParcelStoreSystem at Serialize, PreSerialize<VanillaMapTileUnlockSystem> before Serialize, VanillaMapTileUnlockSystem at PreTool, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/ParcelPlacementDiagnosticsSystem at PostTool, ParcelDeletionRestrictionSystem before ToolApplySystem at ApplyTool, VanillaMapTileVisibilitySystem/ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
+                $"Registered ParcelStoreSystem at Serialize, PreSerialize<VanillaMapTileUnlockSystem> before Serialize, VanillaMapTileUnlockSystem at PreTool, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem at PostTool, ParcelDeletionRestrictionSystem before ToolApplySystem at ApplyTool, diagnosticsEnabled={Settings.EnablePlacementDiagnostics}, VanillaMapTileVisibilitySystem/ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
 
         }
 

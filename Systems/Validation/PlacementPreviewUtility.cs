@@ -27,28 +27,28 @@ namespace CustomLandParcel.Systems
 
         public static bool CurveInsideParcel(Bezier4x3 curve, ParcelStoreSystem parcelStoreSystem)
         {
-            return TryGetFirstOutsideCurveSample(curve, parcelStoreSystem, out _, out _);
+            return TryValidateCurveInsideParcel(curve, parcelStoreSystem, out _, out _);
         }
 
-        public static bool TryGetFirstOutsideCurveSample(
+        public static bool TryValidateCurveInsideParcel(
             Bezier4x3 curve,
             ParcelStoreSystem parcelStoreSystem,
-            out float3 position,
-            out float sample)
+            out float3 firstOutsidePosition,
+            out float firstOutsideSample)
         {
             for (var i = 0; i <= CurveSampleCount; i++)
             {
                 var t = i / (float)CurveSampleCount;
-                position = EvaluateBezier(curve, t);
-                if (!parcelStoreSystem.IsBuildable(new float2(position.x, position.z)))
+                firstOutsidePosition = EvaluateBezier(curve, t);
+                if (!parcelStoreSystem.IsBuildable(new float2(firstOutsidePosition.x, firstOutsidePosition.z)))
                 {
-                    sample = t;
+                    firstOutsideSample = t;
                     return false;
                 }
             }
 
-            position = default;
-            sample = 0f;
+            firstOutsidePosition = default;
+            firstOutsideSample = 0f;
             return true;
         }
 

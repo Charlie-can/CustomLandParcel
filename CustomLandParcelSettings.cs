@@ -22,6 +22,7 @@ namespace CustomLandParcel
         private const int DefaultParcelBoundaryOpacity = 90;
         private const int DefaultParcelFillOpacity = 28;
         private const int DefaultParcelBoundaryWidth = 7;
+        private const bool DefaultEnablePlacementDiagnostics = false;
 
         public CustomLandParcelSettings(IMod mod)
             : base(mod)
@@ -49,6 +50,9 @@ namespace CustomLandParcel
 
         [SettingsUIHidden]
         public int ParcelBoundaryWidth { get; set; } = DefaultParcelBoundaryWidth;
+
+        [SettingsUIHidden]
+        public bool EnablePlacementDiagnostics { get; set; } = DefaultEnablePlacementDiagnostics;
 
         [SettingsUIKeyboardBinding(BindingKeyboard.B, ToggleEditModeAction, alt: true, ctrl: true)]
         public ProxyBinding ToggleEditMode { get; set; }
@@ -81,6 +85,7 @@ namespace CustomLandParcel
             ParcelBoundaryOpacity = DefaultParcelBoundaryOpacity;
             ParcelFillOpacity = DefaultParcelFillOpacity;
             ParcelBoundaryWidth = DefaultParcelBoundaryWidth;
+            EnablePlacementDiagnostics = DefaultEnablePlacementDiagnostics;
         }
 
         public bool SetParcelAppearanceValue(string key, int value)

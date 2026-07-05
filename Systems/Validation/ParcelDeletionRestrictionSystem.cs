@@ -93,7 +93,7 @@ namespace CustomLandParcel.Systems
             {
                 var course = EntityManager.GetComponentData<NetCourse>(definitionEntity);
                 sampleKind = "net-definition";
-                return PlacementPreviewUtility.TryGetFirstOutsideCurveSample(
+                return PlacementPreviewUtility.TryValidateCurveInsideParcel(
                     course.m_Curve,
                     _mParcelStoreSystem,
                     out var outsidePoint,
@@ -134,7 +134,7 @@ namespace CustomLandParcel.Systems
             {
                 var curve = EntityManager.GetComponentData<Curve>(original);
                 sampleKind = "curve-original";
-                return PlacementPreviewUtility.TryGetFirstOutsideCurveSample(
+                return PlacementPreviewUtility.TryValidateCurveInsideParcel(
                     curve.m_Bezier,
                     _mParcelStoreSystem,
                     out var outsidePoint,

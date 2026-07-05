@@ -155,7 +155,7 @@ namespace CustomLandParcel.Systems
                     }
 
                     var curve = curves[i].m_Bezier;
-                    var valid = PlacementPreviewUtility.TryGetFirstOutsideCurveSample(
+                    var valid = PlacementPreviewUtility.TryValidateCurveInsideParcel(
                         curve,
                         _mParcelStoreSystem,
                         out var outsidePoint,

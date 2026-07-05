@@ -43,6 +43,7 @@ namespace CustomLandParcel.Systems
             _mParcelEditToolSystem ??= World.GetOrCreateSystemManaged<ParcelEditToolSystem>();
 
             var buffer = _mOverlayRenderSystem.GetBuffer(out var dependencies);
+            // Overlay buffer writes are immediate here, so wait for prior overlay readers before appending lines.
             dependencies.Complete();
 
             DrawParcels(

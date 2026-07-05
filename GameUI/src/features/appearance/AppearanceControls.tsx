@@ -135,7 +135,7 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
             min={0}
             max={255}
             trackBackground={`linear-gradient(90deg, rgb(0, ${green}, ${blue}), rgb(255, ${green}, ${blue}))`}
-            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryRed", value)}
+            onCommit={(value) => setParcelAppearanceValue("ParcelBoundaryRed", value)}
           />
           <DragSlider
             label="G"
@@ -144,7 +144,7 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
             min={0}
             max={255}
             trackBackground={`linear-gradient(90deg, rgb(${red}, 0, ${blue}), rgb(${red}, 255, ${blue}))`}
-            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryGreen", value)}
+            onCommit={(value) => setParcelAppearanceValue("ParcelBoundaryGreen", value)}
           />
           <DragSlider
             label="B"
@@ -153,7 +153,7 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
             min={0}
             max={255}
             trackBackground={`linear-gradient(90deg, rgb(${red}, ${green}, 0), rgb(${red}, ${green}, 255))`}
-            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryBlue", value)}
+            onCommit={(value) => setParcelAppearanceValue("ParcelBoundaryBlue", value)}
           />
           <DragSlider
             label="A"
@@ -163,7 +163,7 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
             max={100}
             suffix="%"
             trackBackground={`linear-gradient(90deg, rgba(${red}, ${green}, ${blue}, 0), rgba(${red}, ${green}, ${blue}, 1))`}
-            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryOpacity", value)}
+            onCommit={(value) => setParcelAppearanceValue("ParcelBoundaryOpacity", value)}
           />
         </div>
       </div>
@@ -181,7 +181,7 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
           max={100}
           suffix="%"
           trackBackground={`linear-gradient(90deg, rgba(${red}, ${green}, ${blue}, 0), rgba(${red}, ${green}, ${blue}, 0.72))`}
-          onChange={(value) => setParcelAppearanceValue("ParcelFillOpacity", value)}
+          onCommit={(value) => setParcelAppearanceValue("ParcelFillOpacity", value)}
         />
         <DragSlider
           label={t("appearance.width")}
@@ -189,7 +189,7 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
           min={2}
           max={14}
           trackBackground="linear-gradient(90deg, rgba(120, 160, 176, 0.5), rgba(240, 250, 255, 0.96))"
-          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryWidth", value)}
+          onCommit={(value) => setParcelAppearanceValue("ParcelBoundaryWidth", value)}
         />
       </div>
     </div>
@@ -204,7 +204,7 @@ function DragSlider({
   max,
   suffix = "",
   trackBackground,
-  onChange,
+  onCommit,
 }: {
   label: string;
   labelWidth?: string;
@@ -213,11 +213,20 @@ function DragSlider({
   max: number;
   suffix?: string;
   trackBackground: string;
-  onChange: (value: number) => void;
+  onCommit: (value: number) => void;
 }): JSX.Element {
   const [dragging, setDragging] = useState(false);
+  const [draftValue, setDraftValue] = useState(value);
   const trackRef = useRef<HTMLDivElement | null>(null);
-  const percent = ((value - min) / Math.max(1, max - min)) * 100;
+  const draftValueRef = useRef(value);
+  const percent = ((draftValue - min) / Math.max(1, max - min)) * 100;
+
+  useEffect(() => {
+    if (!dragging) {
+      setDraftValue(value);
+      draftValueRef.current = value;
+    }
+  }, [dragging, value]);
 
   const updateFromClientX = useCallback(
     (clientX: number, element: HTMLElement | null) => {
@@ -227,9 +236,11 @@ function DragSlider({
 
       const rect = element.getBoundingClientRect();
       const ratio = clamp((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
-      onChange(clamp(Math.round(min + ratio * (max - min)), min, max));
+      const nextValue = clamp(Math.round(min + ratio * (max - min)), min, max);
+      draftValueRef.current = nextValue;
+      setDraftValue(nextValue);
     },
-    [max, min, onChange],
+    [max, min],
   );
 
   useEffect(() => {
@@ -237,7 +248,10 @@ function DragSlider({
       return undefined;
     }
 
-    const handleMouseUp = () => setDragging(false);
+    const handleMouseUp = () => {
+      setDragging(false);
+      onCommit(draftValueRef.current);
+    };
     const handleMouseMove = (event: MouseEvent) => updateFromClientX(event.clientX, trackRef.current);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
@@ -245,7 +259,7 @@ function DragSlider({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [dragging, updateFromClientX]);
+  }, [dragging, onCommit, updateFromClientX]);
 
   return (
     <div style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "9rem", minHeight: "16rem" }}>
@@ -288,7 +302,7 @@ function DragSlider({
         />
       </div>
       <span style={{ width: "34rem", textAlign: "right", color: colors.text }}>
-        {value}
+        {draftValue}
         {suffix}
       </span>
     </div>

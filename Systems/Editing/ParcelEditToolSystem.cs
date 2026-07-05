@@ -24,6 +24,7 @@ namespace CustomLandParcel.Systems
         private const float EdgeHitRadius = 45f;
         private const float ClosePolygonRadius = 75f;
         private const float DragStartDistance = 8f;
+        private const int HoverLogCooldownFrames = 60;
 
         private ParcelStoreSystem _mParcelStoreSystem;
         private bool _mPointerDown;
@@ -31,6 +32,7 @@ namespace CustomLandParcel.Systems
         private float2 _mPointerDownPosition;
         private float2 _mLastDragPosition;
         private ParcelEditHit _mPointerDownHit;
+        private int _mHoverLogCooldownFrames;
 
         internal ParcelEditSession Session { get; } = new ParcelEditSession();
 
@@ -144,12 +146,17 @@ namespace CustomLandParcel.Systems
                 cursorPosition,
                 VertexHitRadius,
                 EdgeHitRadius);
-            if (!hit.HasSameTarget(Session.Hover))
+            if (!hit.HasSameTarget(Session.Hover) && _mHoverLogCooldownFrames <= 0)
             {
                 Mod.log.Info($"Parcel edit hover changed: {hit}.");
+                _mHoverLogCooldownFrames = HoverLogCooldownFrames;
             }
 
             Session.SetHover(hit);
+            if (_mHoverLogCooldownFrames > 0)
+            {
+                _mHoverLogCooldownFrames--;
+            }
         }
 
         private void HandleInput(float2 cursorPosition)

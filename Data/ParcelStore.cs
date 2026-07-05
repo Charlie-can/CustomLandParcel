@@ -105,6 +105,13 @@ namespace CustomLandParcel.Data
                 return false;
             }
 
+            var previousRed = selected.BoundaryRed;
+            var previousGreen = selected.BoundaryGreen;
+            var previousBlue = selected.BoundaryBlue;
+            var previousBoundaryOpacity = selected.BoundaryOpacity;
+            var previousFillOpacity = selected.FillOpacity;
+            var previousBoundaryWidth = selected.BoundaryWidth;
+
             switch (key)
             {
                 case nameof(LandParcel.BoundaryRed):
@@ -134,6 +141,16 @@ namespace CustomLandParcel.Data
                 default:
                     _mWarn($"Parcel appearance change ignored ({reason}): invalid key='{key}', value={value}.");
                     return false;
+            }
+
+            if (selected.BoundaryRed == previousRed &&
+                selected.BoundaryGreen == previousGreen &&
+                selected.BoundaryBlue == previousBlue &&
+                selected.BoundaryOpacity == previousBoundaryOpacity &&
+                selected.FillOpacity == previousFillOpacity &&
+                selected.BoundaryWidth == previousBoundaryWidth)
+            {
+                return false;
             }
 
             MarkChanged(
