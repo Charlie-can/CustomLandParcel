@@ -51,6 +51,38 @@ namespace CustomLandParcel.Systems
                 Group,
                 "parcelEditToolActive",
                 () => _mParcelEditToolSystem.IsToolActive));
+            AddUpdateBinding(new GetterValueBinding<string>(
+                Group,
+                "activeLocale",
+                GetActiveLocale));
+            AddUpdateBinding(new GetterValueBinding<bool>(
+                Group,
+                "showVanillaUnlockedMapTileBorders",
+                () => Mod.Settings == null || Mod.Settings.ShowVanillaUnlockedMapTileBorders));
+            AddUpdateBinding(new GetterValueBinding<int>(
+                Group,
+                "parcelBoundaryRed",
+                () => Mod.Settings?.ParcelBoundaryRed ?? 51));
+            AddUpdateBinding(new GetterValueBinding<int>(
+                Group,
+                "parcelBoundaryGreen",
+                () => Mod.Settings?.ParcelBoundaryGreen ?? 255));
+            AddUpdateBinding(new GetterValueBinding<int>(
+                Group,
+                "parcelBoundaryBlue",
+                () => Mod.Settings?.ParcelBoundaryBlue ?? 148));
+            AddUpdateBinding(new GetterValueBinding<int>(
+                Group,
+                "parcelBoundaryOpacity",
+                () => Mod.Settings?.ParcelBoundaryOpacity ?? 90));
+            AddUpdateBinding(new GetterValueBinding<int>(
+                Group,
+                "parcelFillOpacity",
+                () => Mod.Settings?.ParcelFillOpacity ?? 28));
+            AddUpdateBinding(new GetterValueBinding<int>(
+                Group,
+                "parcelBoundaryWidth",
+                () => Mod.Settings?.ParcelBoundaryWidth ?? 7));
 
             AddBinding(new TriggerBinding(Group, "addRectangle", AddRectangle));
             AddBinding(new TriggerBinding<string>(Group, "selectParcel", SelectParcel));
@@ -65,6 +97,8 @@ namespace CustomLandParcel.Systems
             AddBinding(new TriggerBinding(Group, "insertVertexAfterSelected", InsertVertexAfterSelected));
             AddBinding(new TriggerBinding(Group, "deleteSelectedVertex", DeleteSelectedVertex));
             AddBinding(new TriggerBinding(Group, "clearAndSeedDefault", ClearAndSeedDefault));
+            AddBinding(new TriggerBinding<bool>(Group, "setShowVanillaUnlockedMapTileBorders", SetShowVanillaUnlockedMapTileBorders));
+            AddBinding(new TriggerBinding<string, int>(Group, "setParcelAppearanceValue", SetParcelAppearanceValue));
 
             Mod.log.Info($"ParcelUISystem enabled. Binding group='{Group}', {_mParcelStoreSystem.GetSummary()}.");
         }
@@ -181,6 +215,35 @@ namespace CustomLandParcel.Systems
             LogTrigger("clearAndSeedDefault");
         }
 
+        private void SetShowVanillaUnlockedMapTileBorders(bool show)
+        {
+            if (Mod.Settings == null)
+            {
+                Mod.log.Warn("Parcel UI trigger setShowVanillaUnlockedMapTileBorders ignored: settings not available.");
+                return;
+            }
+
+            Mod.Settings.SetShowVanillaUnlockedMapTileBorders(show);
+            Mod.log.Info($"Parcel UI appearance setting changed: showVanillaUnlockedMapTileBorders={show}.");
+        }
+
+        private void SetParcelAppearanceValue(string key, int value)
+        {
+            if (Mod.Settings == null)
+            {
+                Mod.log.Warn($"Parcel UI trigger setParcelAppearanceValue ignored: settings not available, key='{key}', value={value}.");
+                return;
+            }
+
+            if (!Mod.Settings.SetParcelAppearanceValue(key, value))
+            {
+                Mod.log.Warn($"Parcel UI trigger setParcelAppearanceValue ignored: invalid key='{key}', value={value}.");
+                return;
+            }
+
+            Mod.log.Info($"Parcel UI appearance setting changed: key={key}, value={value}.");
+        }
+
         private void LogTrigger(string message)
         {
             _mParcelsBinding.Update();
@@ -190,6 +253,11 @@ namespace CustomLandParcel.Systems
         private static bool TryParseGuid(string text, out Guid id)
         {
             return Guid.TryParseExact(text, "N", out id) || Guid.TryParse(text, out id);
+        }
+
+        private static string GetActiveLocale()
+        {
+            return GameManager.instance?.localizationManager?.activeLocaleId ?? "en-US";
         }
     }
 }

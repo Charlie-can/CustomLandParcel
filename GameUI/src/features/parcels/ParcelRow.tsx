@@ -3,16 +3,19 @@ import { Button } from "cs2/ui";
 import { send } from "bindings";
 import { PanelButton } from "components/PanelButton";
 import { Parcel } from "domain";
+import { Translator } from "i18n";
 import { formatArea } from "utils/format";
 import { colors, rowStyle } from "styles";
 
 export function ParcelRow({
   parcel,
   mergeTargetId,
+  t,
   onPickMergeTarget,
 }: {
   parcel: Parcel;
   mergeTargetId: string | null;
+  t: Translator;
   onPickMergeTarget: (id: string) => void;
 }): JSX.Element {
   const activeTarget = parcel.id === mergeTargetId;
@@ -40,15 +43,15 @@ export function ParcelRow({
         }}
         selected={parcel.selected}
         onSelect={() => send("selectParcel", parcel.id)}
-        tooltipLabel="Select parcel"
+        tooltipLabel={t("tooltip.selectParcel")}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", minWidth: 0 }}>
           <div style={{ ...rowStyle, minWidth: 0 }}>
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 800 }}>
-              {parcel.name || "Parcel"}
+              {parcel.name || t("parcel.defaultName")}
             </span>
             <span style={{ color: isLocked ? colors.amber : colors.green, fontSize: "10rem", fontWeight: 800 }}>
-              {isLocked ? "Locked" : "Active"}
+              {isLocked ? t("state.locked") : t("state.active")}
             </span>
           </div>
           <div style={{ ...rowStyle, color: colors.muted, fontSize: "10rem" }}>
@@ -62,10 +65,10 @@ export function ParcelRow({
         active={activeTarget}
         tone={activeTarget ? "primary" : "subtle"}
         style={{ width: "58rem", flex: "0 0 auto" }}
-        tooltipLabel="Use as merge target"
+        tooltipLabel={t("tooltip.mergeTarget")}
         onSelect={() => onPickMergeTarget(parcel.id)}
       >
-        {parcel.selected ? "Selected" : activeTarget ? "Target" : "Merge"}
+        {parcel.selected ? t("parcel.selected") : activeTarget ? t("parcel.target") : t("parcel.merge")}
       </PanelButton>
     </div>
   );

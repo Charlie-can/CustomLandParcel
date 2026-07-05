@@ -21,6 +21,7 @@ namespace CustomLandParcel.Compatibility
         private const int InitialVanillaBoundsRetryFrames = 300;
 
         private EntityQuery _mVanillaMapTileQuery;
+        private EntityQuery _mVanillaMapTileVisibilityQuery;
         private EntityQuery _mLegacyBlockerQuery;
         private EntityQuery _mUnlockedByParcelQuery;
         private EntityQuery _mLockedByParcelQuery;
@@ -44,6 +45,11 @@ namespace CustomLandParcel.Compatibility
                 ComponentType.ReadOnly<Node>(),
                 ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<Temp>(),
+                ComponentType.Exclude<VanillaMapTileBlocker>());
+            _mVanillaMapTileVisibilityQuery = GetEntityQuery(
+                ComponentType.ReadOnly<MapTile>(),
+                ComponentType.ReadOnly<Node>(),
+                ComponentType.Exclude<Deleted>(),
                 ComponentType.Exclude<VanillaMapTileBlocker>());
             _mLegacyBlockerQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileBlocker>());
             _mUnlockedByParcelQuery = GetEntityQuery(ComponentType.ReadOnly<VanillaMapTileUnlockedByParcel>());
@@ -71,9 +77,20 @@ namespace CustomLandParcel.Compatibility
 
         protected override void OnUpdate()
         {
+            if (_mUnlockMaskRefreshFramesRemaining > 0)
+            {
+                _mUnlockMaskRefreshFramesRemaining--;
+                return;
+            }
+
+            var vanillaVisibilityChanged = _mVisibilitySync.SyncVanillaOwnedMapTileVisibility(
+                _mVanillaMapTileVisibilityQuery,
+                "visibility refresh");
+
             if (!IsCompatibilityEnabled())
             {
-                DisableCompatibilityLayer();
+                DisableCompatibilityLayer(vanillaVisibilityChanged);
+                _mUnlockMaskRefreshFramesRemaining = UnlockMaskRefreshFrames;
                 return;
             }
 
@@ -90,13 +107,7 @@ namespace CustomLandParcel.Compatibility
                 _mLegacyBlockersChecked = true;
             }
 
-            if (_mUnlockMaskRefreshFramesRemaining > 0)
-            {
-                _mUnlockMaskRefreshFramesRemaining--;
-                return;
-            }
-
-            MaintainUnlockedMapTiles();
+            MaintainUnlockedMapTiles(vanillaVisibilityChanged);
             _mUnlockMaskRefreshFramesRemaining = UnlockMaskRefreshFrames;
         }
 
@@ -105,16 +116,15 @@ namespace CustomLandParcel.Compatibility
             return Mod.Settings == null || Mod.Settings.EnableVanillaMapTileCompatibility;
         }
 
-        private void DisableCompatibilityLayer()
+        private void DisableCompatibilityLayer(int vanillaVisibilityChanged)
         {
             var destroyedBlockers = DestroyLegacyBlockers("compatibility disabled");
-            var shownTiles = _mVisibilitySync.RestoreMapTileVisibility(_mHiddenBySettingQuery, "compatibility disabled");
             var unlockedTiles = _mOwnershipSync.RestoreLockedMapTiles(_mLockedByParcelQuery, "compatibility disabled");
             var restoredTiles = _mOwnershipSync.RestoreUnlockedMapTiles(_mUnlockedByParcelQuery, "compatibility disabled");
-            if (destroyedBlockers > 0 || restoredTiles > 0 || unlockedTiles > 0 || shownTiles > 0)
+            if (destroyedBlockers > 0 || restoredTiles > 0 || unlockedTiles > 0 || vanillaVisibilityChanged > 0)
             {
                 Mod.log.Info(
-                    $"Vanilla MapTile unlock compatibility disabled by settings; destroyedLegacyBlockers={destroyedBlockers}, restoredTiles={restoredTiles}, unlockedTiles={unlockedTiles}, shownTiles={shownTiles}.");
+                    $"Vanilla MapTile unlock compatibility disabled by settings; destroyedLegacyBlockers={destroyedBlockers}, restoredTiles={restoredTiles}, unlockedTiles={unlockedTiles}, vanillaVisibilityChanged={vanillaVisibilityChanged}, showVanillaBorders={ShouldShowVanillaUnlockedMapTileBorders()}.");
             }
             else if (_mDisabledLogCooldownFrames <= 0)
             {
@@ -129,12 +139,9 @@ namespace CustomLandParcel.Compatibility
             _mDisabledLogCooldownFrames--;
         }
 
-        private void MaintainUnlockedMapTiles()
+        private void MaintainUnlockedMapTiles(int vanillaVisibilityChanged)
         {
             TryAlignDefaultParcelToVanillaOwnedTiles();
-            var vanillaVisibilityChanged = _mVisibilitySync.SyncVanillaOwnedMapTileVisibility(
-                _mVanillaMapTileQuery,
-                "compatibility refresh");
             if (_mParcelStoreSystem.TryGetBuildableUnionBounds(out var parcelMin, out var parcelMax))
             {
                 RefreshUnlockedMapTiles(parcelMin, parcelMax, vanillaVisibilityChanged);

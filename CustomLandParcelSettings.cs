@@ -32,22 +32,22 @@ namespace CustomLandParcel
 
         public bool ShowVanillaUnlockedMapTileBorders { get; set; } = DefaultShowVanillaUnlockedMapTileBorders;
 
-        [SettingsUISlider(min = 0f, max = 255f, step = 1f, unit = "integer")]
+        [SettingsUIHidden]
         public int ParcelBoundaryRed { get; set; } = DefaultParcelBoundaryRed;
 
-        [SettingsUISlider(min = 0f, max = 255f, step = 1f, unit = "integer")]
+        [SettingsUIHidden]
         public int ParcelBoundaryGreen { get; set; } = DefaultParcelBoundaryGreen;
 
-        [SettingsUISlider(min = 0f, max = 255f, step = 1f, unit = "integer")]
+        [SettingsUIHidden]
         public int ParcelBoundaryBlue { get; set; } = DefaultParcelBoundaryBlue;
 
-        [SettingsUISlider(min = 0f, max = 100f, step = 1f, unit = "percentage")]
+        [SettingsUIHidden]
         public int ParcelBoundaryOpacity { get; set; } = DefaultParcelBoundaryOpacity;
 
-        [SettingsUISlider(min = 0f, max = 100f, step = 1f, unit = "percentage")]
+        [SettingsUIHidden]
         public int ParcelFillOpacity { get; set; } = DefaultParcelFillOpacity;
 
-        [SettingsUISlider(min = 2f, max = 14f, step = 1f, unit = "integer")]
+        [SettingsUIHidden]
         public int ParcelBoundaryWidth { get; set; } = DefaultParcelBoundaryWidth;
 
         [SettingsUIKeyboardBinding(BindingKeyboard.B, ToggleEditModeAction, alt: true, ctrl: true)]
@@ -81,6 +81,52 @@ namespace CustomLandParcel
             ParcelBoundaryOpacity = DefaultParcelBoundaryOpacity;
             ParcelFillOpacity = DefaultParcelFillOpacity;
             ParcelBoundaryWidth = DefaultParcelBoundaryWidth;
+        }
+
+        public bool SetParcelAppearanceValue(string key, int value)
+        {
+            switch (key)
+            {
+                case nameof(ParcelBoundaryRed):
+                    ParcelBoundaryRed = Clamp(value, 0, 255);
+                    break;
+                case nameof(ParcelBoundaryGreen):
+                    ParcelBoundaryGreen = Clamp(value, 0, 255);
+                    break;
+                case nameof(ParcelBoundaryBlue):
+                    ParcelBoundaryBlue = Clamp(value, 0, 255);
+                    break;
+                case nameof(ParcelBoundaryOpacity):
+                    ParcelBoundaryOpacity = Clamp(value, 0, 100);
+                    break;
+                case nameof(ParcelFillOpacity):
+                    ParcelFillOpacity = Clamp(value, 0, 100);
+                    break;
+                case nameof(ParcelBoundaryWidth):
+                    ParcelBoundaryWidth = Clamp(value, 2, 14);
+                    break;
+                default:
+                    return false;
+            }
+
+            ApplyAndSave();
+            return true;
+        }
+
+        public void SetShowVanillaUnlockedMapTileBorders(bool show)
+        {
+            ShowVanillaUnlockedMapTileBorders = show;
+            ApplyAndSave();
+        }
+
+        private static int Clamp(int value, int min, int max)
+        {
+            if (value < min)
+            {
+                return min;
+            }
+
+            return value > max ? max : value;
         }
     }
 }

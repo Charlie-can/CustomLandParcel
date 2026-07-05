@@ -1,10 +1,15 @@
 import React, { useState } from "react";
+import { useValue } from "cs2/api";
 import { Button } from "cs2/ui";
+import { activeLocaleBinding } from "bindings";
 import { ParcelPanel } from "features/panel/ParcelPanel";
+import { createTranslator } from "i18n";
 import { launcherButtonStyle } from "styles";
 
 export function CustomLandParcelRoot(): JSX.Element {
   const [open, setOpen] = useState(false);
+  const locale = useValue(activeLocaleBinding);
+  const t = createTranslator(locale);
 
   return (
     <>
@@ -12,11 +17,11 @@ export function CustomLandParcelRoot(): JSX.Element {
         style={launcherButtonStyle}
         selected={open}
         onSelect={() => setOpen(!open)}
-        tooltipLabel="Open Custom Land Parcel panel"
+        tooltipLabel={t("app.open")}
       >
         LP
       </Button>
-      {open && <ParcelPanel onClose={() => setOpen(false)} />}
+      {open && <ParcelPanel t={t} onClose={() => setOpen(false)} />}
     </>
   );
 }

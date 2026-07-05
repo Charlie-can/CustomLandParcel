@@ -5,28 +5,35 @@ import { columnStyle, rowStyle } from "styles";
 export function MovePad({
   disabled,
   step,
+  labels,
   onMove,
 }: {
   disabled: boolean;
   step: number;
+  labels: {
+    north: string;
+    south: string;
+    west: string;
+    east: string;
+  };
   onMove: (x: number, y: number) => void;
 }): JSX.Element {
   return (
     <div style={{ ...columnStyle, gap: "4rem", width: "106rem" }}>
       <div style={{ ...rowStyle, justifyContent: "center" }}>
         <PanelButton disabled={disabled} style={{ width: "34rem" }} onSelect={() => onMove(0, step)}>
-          N
+          {labels.north}
         </PanelButton>
       </div>
       <div style={{ ...rowStyle, justifyContent: "center", gap: "3rem" }}>
         <PanelButton disabled={disabled} style={{ width: "34rem" }} onSelect={() => onMove(-step, 0)}>
-          W
+          {labels.west}
         </PanelButton>
         <PanelButton disabled={disabled} style={{ width: "34rem" }} onSelect={() => onMove(0, -step)}>
-          S
+          {labels.south}
         </PanelButton>
         <PanelButton disabled={disabled} style={{ width: "34rem" }} onSelect={() => onMove(step, 0)}>
-          E
+          {labels.east}
         </PanelButton>
       </div>
     </div>

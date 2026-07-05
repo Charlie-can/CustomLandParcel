@@ -39,6 +39,17 @@ export const inputStyle: React.CSSProperties = {
   fontSize: "11rem",
 };
 
+export const compactInputStyle: React.CSSProperties = {
+  width: "38rem",
+  height: "21rem",
+  padding: "0 4rem",
+  color: colors.text,
+  background: colors.panelSofter,
+  border: `1rem solid ${colors.border}`,
+  borderRadius: "4rem",
+  fontSize: "10rem",
+};
+
 export const launcherButtonStyle: React.CSSProperties = {
   width: "44rem",
   height: "44rem",
@@ -55,6 +66,18 @@ export const launcherButtonStyle: React.CSSProperties = {
   fontWeight: 800,
   letterSpacing: 0,
 };
+
+export function swatchStyle(color: string): React.CSSProperties {
+  return {
+    width: "22rem",
+    height: "22rem",
+    flex: "0 0 auto",
+    background: color,
+    border: "1rem solid rgba(255, 255, 255, 0.52)",
+    borderRadius: "4rem",
+    boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.22)",
+  };
+}
 
 export function getButtonStyle(
   tone: ButtonTone = "default",

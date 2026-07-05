@@ -13,12 +13,14 @@ import { MovePad } from "components/MovePad";
 import { PanelButton } from "components/PanelButton";
 import { Section } from "components/Section";
 import { SelectedParcel } from "domain";
+import { AppearanceControls } from "features/appearance/AppearanceControls";
 import { MergeConfirm } from "features/parcels/MergeConfirm";
 import { ParcelRow } from "features/parcels/ParcelRow";
 import { VertexList } from "features/vertices/VertexList";
+import { Translator } from "i18n";
 import { colors, columnStyle, inputStyle, rowStyle } from "styles";
 
-export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
+export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void }): JSX.Element {
   const parcels = useValue(parcelsBinding) || [];
   const selectedParcelId = useValue(selectedParcelIdBinding);
   const selectedVertexIndex = useValue(selectedVertexIndexBinding);
@@ -66,10 +68,15 @@ export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
     >
       <div style={{ ...rowStyle, justifyContent: "space-between", minHeight: "30rem" }}>
         <div style={{ ...columnStyle, gap: "2rem", minWidth: 0 }}>
-          <span style={{ fontSize: "14rem", fontWeight: 900 }}>Custom Land Parcel</span>
+          <span style={{ fontSize: "14rem", fontWeight: 900 }}>{t("app.title")}</span>
           <span style={{ color: colors.muted, fontSize: "10rem" }}>
-            {parcels.length} parcels
-            {selected ? ` / ${selected.points.length} pts / vertex ${selected.selectedVertexIndex + 1}` : " / no selection"}
+            {selected
+              ? t("summary.selected", {
+                  count: parcels.length,
+                  points: selected.points.length,
+                  vertex: selected.selectedVertexIndex + 1,
+                })
+              : `${parcels.length} ${t("section.parcels")} / ${t("summary.none")}`}
           </span>
         </div>
         <PanelButton tone="subtle" style={{ width: "28rem", minHeight: "28rem", padding: 0, flex: "0 0 auto" }} onSelect={onClose}>
@@ -77,67 +84,82 @@ export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         </PanelButton>
       </div>
 
-      <Section title="Tools">
+      <Section title={t("section.tools")}>
         <div style={{ ...rowStyle, alignItems: "stretch" }}>
           <PanelButton
             active={editToolActive}
             tone={editToolActive ? "primary" : "default"}
             style={{ flex: "1 1 0", minHeight: "31rem" }}
-            tooltipLabel="Toggle map parcel edit tool"
+            tooltipLabel={t("tooltip.mapTool")}
             onSelect={() => send("setParcelEditToolActive", !editToolActive)}
           >
-            {editToolActive ? "Map Tool On" : "Map Tool Off"}
+            {editToolActive ? t("tool.mapOn") : t("tool.mapOff")}
           </PanelButton>
           <PanelButton
             style={{ flex: "1 1 0", minHeight: "31rem" }}
-            tooltipLabel="Add a rectangular parcel"
+            tooltipLabel={t("tooltip.newRectangle")}
             onSelect={() => send("addRectangle")}
           >
-            New Rectangle
+            {t("tool.newRectangle")}
           </PanelButton>
         </div>
       </Section>
 
-      <Section title="Parcels">
+      <Section title={t("section.parcels")}>
         <div style={{ ...columnStyle, maxHeight: "112rem", overflowY: "auto", gap: "4rem" }}>
           {parcels.map((parcel) => (
             <ParcelRow
               key={parcel.id}
               parcel={parcel}
               mergeTargetId={mergeTargetId}
+              t={t}
               onPickMergeTarget={setMergeTargetId}
             />
           ))}
         </div>
       </Section>
 
-      <Section title="Selected">
+      <Section title={t("section.selected")}>
         <input
           style={inputStyle}
           value={selected ? selected.name : ""}
           disabled={!selected}
           onChange={(event) => selected && send("renameSelectedParcel", event.currentTarget.value)}
-          title="Rename selected parcel"
+          title={t("selected.rename")}
         />
-        <MergeConfirm selected={selected} target={mergeTarget} onCancel={() => setMergeTargetId(null)} />
+        <MergeConfirm selected={selected} target={mergeTarget} t={t} onCancel={() => setMergeTargetId(null)} />
         <div style={{ ...rowStyle, alignItems: "stretch" }}>
           <PanelButton style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("selectNextParcel", -1)}>
-            Prev
+            {t("action.prev")}
           </PanelButton>
           <PanelButton style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("selectNextParcel", 1)}>
-            Next
+            {t("action.next")}
           </PanelButton>
           <PanelButton tone="danger" style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("deleteSelectedParcel")}>
-            Delete
+            {t("action.delete")}
           </PanelButton>
         </div>
       </Section>
 
-      <Section title="Move">
+      <Section title={t("section.appearance")}>
+        <AppearanceControls t={t} />
+      </Section>
+
+      <Section title={t("section.move")}>
         <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between" }}>
-          <MovePad disabled={!selected} step={step} onMove={moveSelectedParcel} />
+          <MovePad
+            disabled={!selected}
+            step={step}
+            labels={{
+              north: t("move.north"),
+              south: t("move.south"),
+              west: t("move.west"),
+              east: t("move.east"),
+            }}
+            onMove={moveSelectedParcel}
+          />
           <label style={{ ...columnStyle, gap: "3rem", color: colors.muted, fontSize: "10rem", width: "84rem" }}>
-            Step
+            {t("move.step")}
             <input
               style={{ ...inputStyle, width: "100%", flex: "0 0 auto" }}
               type="number"
@@ -149,16 +171,26 @@ export function ParcelPanel({ onClose }: { onClose: () => void }): JSX.Element {
         </div>
       </Section>
 
-      <Section title="Vertices">
-        <VertexList selected={selected} />
-        <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between" }}>
-          <MovePad disabled={!selected} step={step} onMove={moveSelectedVertex} />
-          <div style={{ ...columnStyle, flex: "1 1 auto" }}>
+      <Section title={t("section.vertices")}>
+        <VertexList selected={selected} t={t} />
+        <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <MovePad
+            disabled={!selected}
+            step={step}
+            labels={{
+              north: t("move.north"),
+              south: t("move.south"),
+              west: t("move.west"),
+              east: t("move.east"),
+            }}
+            onMove={moveSelectedVertex}
+          />
+          <div style={{ ...rowStyle, flex: "1 1 140rem", flexWrap: "wrap" }}>
             <PanelButton disabled={!selected} onSelect={() => send("insertVertexAfterSelected")}>
-              Insert Vertex
+              {t("action.insertVertex")}
             </PanelButton>
             <PanelButton tone="danger" disabled={!selected} onSelect={() => send("deleteSelectedVertex")}>
-              Delete Vertex
+              {t("action.deleteVertex")}
             </PanelButton>
           </div>
         </div>

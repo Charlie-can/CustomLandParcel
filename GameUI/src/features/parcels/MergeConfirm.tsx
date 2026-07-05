@@ -2,15 +2,18 @@ import React from "react";
 import { send } from "bindings";
 import { PanelButton } from "components/PanelButton";
 import { Parcel, SelectedParcel } from "domain";
+import { Translator } from "i18n";
 import { colors, rowStyle } from "styles";
 
 export function MergeConfirm({
   selected,
   target,
+  t,
   onCancel,
 }: {
   selected: SelectedParcel | null;
   target: Parcel | null;
+  t: Translator;
   onCancel: () => void;
 }): JSX.Element | null {
   if (!selected || !target) {
@@ -28,7 +31,7 @@ export function MergeConfirm({
       }}
     >
       <div style={{ flex: "1 1 auto", minWidth: 0, color: colors.text, fontSize: "12rem" }}>
-        Merge <b>{selected.name}</b> with <b>{target.name}</b>
+        {t("merge.message", { selected: selected.name, target: target.name })}
       </div>
       <PanelButton
         tone="primary"
@@ -38,10 +41,10 @@ export function MergeConfirm({
           onCancel();
         }}
       >
-        OK
+        {t("action.confirm")}
       </PanelButton>
       <PanelButton tone="subtle" style={{ width: "62rem", flex: "0 0 auto" }} onSelect={onCancel}>
-        Cancel
+        {t("action.cancel")}
       </PanelButton>
     </div>
   );
