@@ -35,23 +35,50 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
 
   return (
     <div style={{ ...columnStyle, gap: "4rem" }}>
-      <div
+      <button
+        type="button"
+        onClick={() => send("setShowVanillaUnlockedMapTileBorders", !showVanilla)}
         style={{
           ...rowStyle,
           justifyContent: "space-between",
           alignItems: "center",
-          minHeight: "20rem",
+          minHeight: "24rem",
+          padding: "0 7rem",
+          color: colors.text,
+          background: showVanilla ? "rgba(49, 120, 158, 0.32)" : "rgba(232, 246, 255, 0.055)",
+          border: showVanilla ? `1rem solid ${colors.borderStrong}` : `1rem solid ${colors.border}`,
+          borderRadius: "4rem",
+          fontSize: "10rem",
+          fontWeight: 800,
         }}
       >
-        <label style={{ ...rowStyle, gap: "5rem", color: colors.text, fontSize: "10rem", minWidth: 0 }}>
-          <input
-            type="checkbox"
-            checked={showVanilla}
-            onChange={(event) => send("setShowVanillaUnlockedMapTileBorders", event.currentTarget.checked)}
+        <span>{t("appearance.showVanilla")}</span>
+        <span
+          style={{
+            position: "relative",
+            width: "26rem",
+            height: "13rem",
+            flex: "0 0 auto",
+            background: showVanilla ? colors.primary : "rgba(80, 98, 108, 0.72)",
+            border: "1rem solid rgba(235, 248, 255, 0.24)",
+            borderRadius: "7rem",
+            boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.22)",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: "1rem",
+              left: showVanilla ? "14rem" : "1rem",
+              width: "9rem",
+              height: "9rem",
+              background: "rgba(245, 250, 255, 0.96)",
+              borderRadius: "5rem",
+              boxShadow: "0 1rem 4rem rgba(0, 0, 0, 0.36)",
+            }}
           />
-          {t("appearance.showVanilla")}
-        </label>
-      </div>
+        </span>
+      </button>
       <div
         style={{
           ...toolSurfaceStyle,
