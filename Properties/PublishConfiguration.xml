@@ -1,39 +1,71 @@
 ﻿<Publish>
 	<!--Id must be set in order to update existed mod. it is not required for publishing mod for the first time-->
-	<ModId Value="" />
+	<ModId Value="150138" />
 	<!--Name of the mod to display to players-->
 	<DisplayName Value="Custom Land Parcel" />
 	<!--Short description of the mod-->
-	<ShortDescription Value="Draw and edit custom buildable land parcels directly on the map." />
+	<ShortDescription Value="Draw and edit custom buildable land parcels directly on the map. / 直接在地图上绘制和编辑自定义可建造地块。" />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-Custom Land Parcel lets you define your own buildable land boundaries directly in the map view.
+Custom Land Parcel lets you draw, edit, and manage custom buildable land parcels directly on the map.
 
 Features:
-- Draw and edit custom parcel polygons.
-- Drag control nodes directly on the map.
-- Move parcels and vertices from the in-game panel.
-- Merge parcels into one buildable area.
-- Customize parcel color, fill opacity, line opacity, and line width per parcel.
+- Draw custom polygon parcels directly in the map view.
+- Enable control-node editing to drag parcels, edges, and vertices on terrain.
+- Create rectangles, create multiple parcels, rename parcels, delete parcels, and merge parcels when needed.
+- Move parcels and vertices from the UI or with configurable hotkeys.
+- Insert and delete polygon vertices for finer boundary control.
+- Customize each parcel independently, including border color, opacity, fill opacity, and line width.
+- Use the in-game parcel panel with localized English and Simplified Chinese text.
+- Save parcel geometry, selection, and appearance data with the current save game.
+- Expand buildable areas based on your custom parcel boundaries.
+- No manual vanilla map tile purchase is required for areas covered by active custom parcels.
+- Custom parcel area participates in the city economy and automatically contributes land-area based maintenance cost.
+- Construction previews outside active custom parcels are blocked with the vanilla city-limit error feedback.
 - Optionally hide vanilla unlocked tile border visuals.
-- Keeps vanilla construction feedback for out-of-bounds placement.
+- Vanilla border hiding suppresses the original city boundary mesh only; it does not hide or delete map tile entities.
+- A newly initialized save starts from a default custom parcel and can align that parcel to the game's initial unlocked area.
 
 Beta note:
-This mod changes city build boundary behavior. Please test on a backup save before using it on an important city.
+This mod changes city build boundary and land-economy behavior. Please back up important saves before use.
+Demolition outside custom parcels may still follow vanilla city-limit behavior.
+
+---
+
+自定义地块允许你直接在地图上绘制、编辑和管理可建造边界。
+
+功能：
+- 直接在地图中绘制自定义多边形地块。
+- 开启控制节点后，可在地形上拖动地块、边线和节点。
+- 支持新建矩形、多个地块、重命名、删除地块和按需合并。
+- 支持通过 UI 或可配置热键移动地块和节点。
+- 支持插入、删除多边形节点，方便精细调整边界。
+- 每个地块都可以独立设置边界颜色、线透明度、填充透明度和线宽。
+- 提供游戏内地块面板，并支持英文和简体中文界面文本。
+- 地块形状、选中状态和外观会跟随当前存档保存。
+- 根据自定义地块边界扩展可建造范围。
+- 自定义地块覆盖范围内不需要再手动购买原版地图格。
+- 自定义地块面积会参与城市经济，并按实际占地自动计入维护费用。
+- 超出启用自定义地块范围的建造预览会被阻止，并显示原版城市边界错误反馈。
+- 可选择隐藏原版已解锁地块虚线。
+- 隐藏原版虚线只会屏蔽原版城市边界网格的显示，不会隐藏或删除地图格实体。
+- 新存档初始化时会创建默认自定义地块，并可对齐到游戏初始已解锁区域。
+
+测试版提醒：
+本 Mod 会改变城市可建造边界和地块经济逻辑。请在重要存档中使用前先备份。
+自定义地块外的拆除行为仍可能遵循游戏原版城市边界规则。
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
 	<!--Tag, can be set multiple times-->
-	<Tag Value="Map" />
-	<Tag Value="Gameplay" />
-	<Tag Value="Tools" />
+	<Tag Value="UIAreas" />
 	<!--Version of the mod-->
 	<ModVersion Value="0.1.0-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="Initial beta release with custom parcel drawing, node editing, parcel styling, vanilla border hiding, and build boundary validation." />
+	<ChangeLog Value="Initial beta release: custom parcel drawing, control-node editing, multi-parcel merge, save-backed per-parcel styling, vanilla border hiding, no manual vanilla tile purchase inside active parcels, land-area based economy/maintenance integration, and build boundary validation. / 首个测试版：支持自定义地块绘制、控制节点编辑、多地块合并、随存档保存的独立样式、隐藏原版虚线、启用地块内无需手动购买原版地图格、按占地参与经济/维护费，以及建造边界校验。" />
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--Supported values Public, Private, Unlisted-->
