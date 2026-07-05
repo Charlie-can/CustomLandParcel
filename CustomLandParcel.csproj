@@ -88,6 +88,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Remove="References\Decompiled\**\*.cs" />
+		<None Remove="References\Decompiled\**\*" />
+		<Content Remove="References\Decompiled\**\*" />
 		<None Include="$(ModPropsFile)" Link="Properties\Mod.props" />
 		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
 		<None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />

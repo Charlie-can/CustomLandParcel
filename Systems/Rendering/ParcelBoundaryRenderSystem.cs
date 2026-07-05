@@ -62,6 +62,7 @@ namespace CustomLandParcel.Systems
             const float width = 7f;
             const float dashLength = 64f;
             const float gapLength = 48f;
+            var showEditHandles = session.IsDrawing || session.IsDragging || session.Hover.Kind != ParcelEditHitKind.None;
 
             foreach (var parcel in store.Parcels)
             {
@@ -80,8 +81,8 @@ namespace CustomLandParcel.Systems
                                        && session.Hover.EdgeIndex == pointIndex;
                     DrawDashedSegment(
                         buffer,
-                        hoveringEdge ? new Color(1f, 1f, 1f, 0.95f) : outlineColor,
-                        hoveringEdge ? new Color(1f, 1f, 1f, 0.46f) : fillColor,
+                        hoveringEdge ? new Color(0.78f, 1f, 0.98f, 0.98f) : outlineColor,
+                        hoveringEdge ? new Color(0.78f, 1f, 0.98f, 0.46f) : fillColor,
                         style,
                         parcel.Points[pointIndex],
                         parcel.Points[(pointIndex + 1) % parcel.Points.Count],
@@ -90,7 +91,7 @@ namespace CustomLandParcel.Systems
                         gapLength);
                 }
 
-                if (!selected && session.Hover.ParcelId != parcel.Id)
+                if (!showEditHandles || (!selected && session.Hover.ParcelId != parcel.Id))
                 {
                     continue;
                 }
@@ -104,8 +105,8 @@ namespace CustomLandParcel.Systems
                     var handleColor = hoveringVertex
                         ? new Color(1f, 0.96f, 0.55f, 0.98f)
                         : vertexIndex == store.SelectedVertexIndex
-                        ? new Color(1f, 1f, 1f, 0.95f)
-                        : new Color(0.82f, 0.92f, 1f, 0.78f);
+                        ? new Color(0.76f, 1f, 0.95f, 0.95f)
+                        : new Color(0.62f, 0.95f, 0.72f, 0.78f);
                     buffer.DrawCircle(
                         handleColor,
                         handleColor,
@@ -164,7 +165,7 @@ namespace CustomLandParcel.Systems
         {
             if (selected)
             {
-                return new Color(1f, 1f, 1f, 0.9f);
+                return new Color(0.2f, 1f, 0.58f, 0.9f);
             }
 
             switch (state)
@@ -182,7 +183,7 @@ namespace CustomLandParcel.Systems
         {
             if (selected)
             {
-                return new Color(1f, 1f, 1f, 0.34f);
+                return new Color(0.2f, 1f, 0.58f, 0.32f);
             }
 
             switch (state)
