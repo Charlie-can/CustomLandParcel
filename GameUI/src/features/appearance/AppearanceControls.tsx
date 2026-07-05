@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useValue } from "cs2/api";
 import {
   parcelBoundaryBlueBinding,
@@ -12,19 +12,7 @@ import {
   showVanillaUnlockedMapTileBordersBinding,
 } from "bindings";
 import { Translator } from "i18n";
-import { TranslationKey } from "i18n/translations";
 import { colors, columnStyle, rowStyle, swatchStyle } from "styles";
-
-const appearanceFields = [
-  { key: "ParcelBoundaryRed", label: "appearance.red", min: 0, max: 255, binding: parcelBoundaryRedBinding },
-  { key: "ParcelBoundaryGreen", label: "appearance.green", min: 0, max: 255, binding: parcelBoundaryGreenBinding },
-  { key: "ParcelBoundaryBlue", label: "appearance.blue", min: 0, max: 255, binding: parcelBoundaryBlueBinding },
-  { key: "ParcelBoundaryOpacity", label: "appearance.borderOpacity", min: 0, max: 100, binding: parcelBoundaryOpacityBinding },
-  { key: "ParcelFillOpacity", label: "appearance.fillOpacity", min: 0, max: 100, binding: parcelFillOpacityBinding },
-  { key: "ParcelBoundaryWidth", label: "appearance.width", min: 2, max: 14, binding: parcelBoundaryWidthBinding },
-] as const;
-
-type AppearanceFieldConfig = (typeof appearanceFields)[number];
 
 const colorPresets = [
   { label: "Mint", red: 51, green: 255, blue: 148 },
@@ -39,8 +27,11 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
   const green = useValue(parcelBoundaryGreenBinding);
   const blue = useValue(parcelBoundaryBlueBinding);
   const opacity = useValue(parcelBoundaryOpacityBinding);
+  const fillOpacity = useValue(parcelFillOpacityBinding);
+  const width = useValue(parcelBoundaryWidthBinding);
   const showVanilla = useValue(showVanillaUnlockedMapTileBordersBinding);
   const swatchColor = `rgba(${red}, ${green}, ${blue}, ${Math.max(0.1, opacity / 100)})`;
+  const alphaValue = Math.round(opacity * 2.55);
 
   return (
     <div style={{ ...columnStyle, gap: "6rem" }}>
@@ -55,59 +46,214 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
         </label>
         <div style={swatchStyle(swatchColor)} title={t("appearance.color")} />
       </div>
-      <div style={{ ...rowStyle, flexWrap: "wrap", alignItems: "center", gap: "4rem" }}>
-        {colorPresets.map((preset) => (
-          <button
-            key={preset.label}
-            type="button"
-            title={preset.label}
-            onClick={() => applyColorPreset(preset)}
+      <div
+        style={{
+          ...columnStyle,
+          gap: "5rem",
+          padding: "6rem",
+          background: "rgba(255, 255, 255, 0.045)",
+          border: "1rem solid rgba(170, 205, 218, 0.18)",
+          borderRadius: "4rem",
+        }}
+      >
+        <div style={{ ...rowStyle, alignItems: "center" }}>
+          <div
             style={{
-              width: "18rem",
-              height: "18rem",
-              minWidth: "18rem",
-              minHeight: "18rem",
-              padding: "0rem",
-              border: isActivePreset(preset, red, green, blue)
-                ? "2rem solid rgba(240, 250, 255, 0.96)"
-                : "1rem solid rgba(150, 182, 197, 0.58)",
-              background: `rgb(${preset.red}, ${preset.green}, ${preset.blue})`,
-              borderRadius: "3rem",
+              width: "34rem",
+              height: "34rem",
+              flex: "0 0 auto",
+              background: swatchColor,
+              border: "2rem solid rgba(235, 248, 255, 0.82)",
+              borderRadius: "4rem",
+              boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.26)",
             }}
           />
-        ))}
+          <div style={{ ...columnStyle, gap: "2rem", minWidth: 0 }}>
+            <span style={{ color: colors.text, fontSize: "10rem", fontWeight: 800 }}>{t("appearance.color")}</span>
+            <span style={{ color: colors.muted, fontSize: "9rem" }}>
+              rgba({red}, {green}, {blue}, {alphaValue})
+            </span>
+          </div>
+          <div style={{ ...rowStyle, flexWrap: "wrap", justifyContent: "flex-end", gap: "3rem", marginLeft: "auto" }}>
+            {colorPresets.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                title={preset.label}
+                onClick={() => applyColorPreset(preset)}
+                style={{
+                  width: "16rem",
+                  height: "16rem",
+                  minWidth: "16rem",
+                  minHeight: "16rem",
+                  padding: "0rem",
+                  border: isActivePreset(preset, red, green, blue)
+                    ? "2rem solid rgba(240, 250, 255, 0.96)"
+                    : "1rem solid rgba(150, 182, 197, 0.58)",
+                  background: `rgb(${preset.red}, ${preset.green}, ${preset.blue})`,
+                  borderRadius: "3rem",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+        <DragSlider
+          label="R"
+          labelWidth="14rem"
+          value={red}
+          min={0}
+          max={255}
+          trackBackground={`linear-gradient(90deg, rgb(0, ${green}, ${blue}), rgb(255, ${green}, ${blue}))`}
+          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryRed", value)}
+        />
+        <DragSlider
+          label="G"
+          labelWidth="14rem"
+          value={green}
+          min={0}
+          max={255}
+          trackBackground={`linear-gradient(90deg, rgb(${red}, 0, ${blue}), rgb(${red}, 255, ${blue}))`}
+          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryGreen", value)}
+        />
+        <DragSlider
+          label="B"
+          labelWidth="14rem"
+          value={blue}
+          min={0}
+          max={255}
+          trackBackground={`linear-gradient(90deg, rgb(${red}, ${green}, 0), rgb(${red}, ${green}, 255))`}
+          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryBlue", value)}
+        />
+        <DragSlider
+          label="A"
+          labelWidth="14rem"
+          value={opacity}
+          min={0}
+          max={100}
+          suffix="%"
+          trackBackground={`linear-gradient(90deg, rgba(${red}, ${green}, ${blue}, 0), rgba(${red}, ${green}, ${blue}, 1))`}
+          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryOpacity", value)}
+        />
       </div>
       <div style={{ ...columnStyle, gap: "4rem" }}>
-        {appearanceFields.map((field) => (
-          <AppearanceField key={field.key} field={field} t={t} />
-        ))}
+        <DragSlider
+          label={t("appearance.fillOpacity")}
+          value={fillOpacity}
+          min={0}
+          max={100}
+          suffix="%"
+          trackBackground={`linear-gradient(90deg, rgba(${red}, ${green}, ${blue}, 0), rgba(${red}, ${green}, ${blue}, 0.72))`}
+          onChange={(value) => setParcelAppearanceValue("ParcelFillOpacity", value)}
+        />
+        <DragSlider
+          label={t("appearance.width")}
+          value={width}
+          min={2}
+          max={14}
+          trackBackground="linear-gradient(90deg, rgba(120, 160, 176, 0.5), rgba(240, 250, 255, 0.96))"
+          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryWidth", value)}
+        />
       </div>
     </div>
   );
 }
 
-function AppearanceField({ field, t }: { field: AppearanceFieldConfig; t: Translator }): JSX.Element {
-  const value = useValue(field.binding);
+function DragSlider({
+  label,
+  labelWidth = "58rem",
+  value,
+  min,
+  max,
+  suffix = "",
+  trackBackground,
+  onChange,
+}: {
+  label: string;
+  labelWidth?: string;
+  value: number;
+  min: number;
+  max: number;
+  suffix?: string;
+  trackBackground: string;
+  onChange: (value: number) => void;
+}): JSX.Element {
+  const [dragging, setDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const percent = ((value - min) / Math.max(1, max - min)) * 100;
+
+  const updateFromClientX = useCallback(
+    (clientX: number, element: HTMLElement | null) => {
+      if (element == null) {
+        return;
+      }
+
+      const rect = element.getBoundingClientRect();
+      const ratio = clamp((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+      onChange(clamp(Math.round(min + ratio * (max - min)), min, max));
+    },
+    [max, min, onChange],
+  );
+
+  useEffect(() => {
+    if (!dragging) {
+      return undefined;
+    }
+
+    const handleMouseUp = () => setDragging(false);
+    const handleMouseMove = (event: MouseEvent) => updateFromClientX(event.clientX, trackRef.current);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [dragging, updateFromClientX]);
+
   return (
-    <label style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "10rem" }}>
-      <span style={{ width: "58rem" }}>{t(field.label as TranslationKey)}</span>
-      <input
-        type="range"
-        min={field.min}
-        max={field.max}
-        value={value}
-        step={1}
-        onChange={(event) =>
-          setParcelAppearanceValue(field.key, clamp(Number(event.currentTarget.value) || 0, field.min, field.max))
-        }
+    <div style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "10rem" }}>
+      <span style={{ width: labelWidth, color: colors.text, fontWeight: 800 }}>{label}</span>
+      <div
+        ref={trackRef}
+        onMouseDown={(event) => {
+          setDragging(true);
+          updateFromClientX(event.clientX, event.currentTarget);
+        }}
+        onMouseMove={(event) => {
+          if (dragging) {
+            updateFromClientX(event.clientX, event.currentTarget);
+          }
+        }}
         style={{
+          position: "relative",
           flex: "1 1 auto",
           minWidth: "92rem",
-          height: "12rem",
+          height: "14rem",
+          background: trackBackground,
+          border: "1rem solid rgba(215, 232, 240, 0.42)",
+          borderRadius: "3rem",
+          boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.22)",
         }}
-      />
-      <span style={{ width: "28rem", textAlign: "right", color: colors.text }}>{value}</span>
-    </label>
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: `${percent}%`,
+            top: "-3rem",
+            width: "8rem",
+            height: "18rem",
+            marginLeft: "-4rem",
+            background: "rgba(245, 250, 255, 0.96)",
+            border: "1rem solid rgba(0, 0, 0, 0.45)",
+            borderRadius: "2rem",
+            boxShadow: "0 1rem 4rem rgba(0, 0, 0, 0.45)",
+          }}
+        />
+      </div>
+      <span style={{ width: "34rem", textAlign: "right", color: colors.text }}>
+        {value}
+        {suffix}
+      </span>
+    </div>
   );
 }
 
