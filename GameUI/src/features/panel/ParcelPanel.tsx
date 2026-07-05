@@ -21,6 +21,7 @@ import { Translator } from "i18n";
 import { colors, columnStyle, inputStyle, rowStyle, toolSurfaceStyle } from "styles";
 
 const maxStep = 10000;
+const stepOptions = [1, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, maxStep];
 
 export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void }): JSX.Element {
   const parcels = useValue(parcelsBinding) || [];
@@ -28,7 +29,6 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
   const selectedVertexIndex = useValue(selectedVertexIndexBinding);
   const editToolActive = useValue(editToolActiveBinding);
   const [step, setStep] = useState(100);
-  const [stepText, setStepText] = useState("100");
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
 
   const selected = useMemo<SelectedParcel | null>(() => {
@@ -180,22 +180,17 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
           />
           <label style={{ ...rowStyle, gap: "5rem", color: colors.muted, fontSize: "10rem", flex: "0 0 auto" }}>
             <span style={{ width: "24rem" }}>{t("move.step")}</span>
-            <input
-              style={{ ...inputStyle, width: "62rem", flex: "0 0 auto" }}
-              value={stepText}
-              onChange={(event) => {
-                const digits = event.currentTarget.value.replace(/[^0-9]/g, "");
-                setStepText(digits);
-                if (digits.length > 0) {
-                  setStep(clampStep(Number(digits)));
-                }
-              }}
-              onBlur={() => {
-                const normalizedStep = clampStep(step);
-                setStep(normalizedStep);
-                setStepText(String(normalizedStep));
-              }}
-            />
+            <select
+              style={{ ...inputStyle, width: "76rem", flex: "0 0 auto" }}
+              value={step}
+              onChange={(event) => setStep(clampStep(Number(event.currentTarget.value)))}
+            >
+              {stepOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
       </Section>

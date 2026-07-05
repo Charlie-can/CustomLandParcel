@@ -234,13 +234,11 @@ namespace CustomLandParcel.Systems
                 return;
             }
 
-            _mParcelsBinding.Update();
             Mod.log.Info($"Parcel UI selected parcel appearance changed: key={key}, value={value}; {_mParcelStoreSystem.GetSummary()}.");
         }
 
         private void LogTrigger(string message)
         {
-            _mParcelsBinding.Update();
             Mod.log.Info($"Parcel UI trigger handled: {message}; {_mParcelStoreSystem.GetSummary()}.");
         }
 

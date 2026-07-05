@@ -61,11 +61,11 @@ Demolition outside custom parcels may still follow vanilla city-limit behavior.
 	<!--Tag, can be set multiple times-->
 	<Tag Value="UIAreas" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1.3-beta" />
+	<ModVersion Value="0.1.4-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="Replaced the top-left launcher text with a custom SVG parcel icon and switched it to the native floating button style for consistent sizing with other mods. / 将左上角启动按钮从文字替换为自定义 SVG 地块图标，并改用原生 floating 按钮样式，使尺寸和其他 Mod 按钮保持一致。" />
+	<ChangeLog Value="Hotfix: replaced the movement step text input with preset numeric choices to avoid a COHTML IME composition crash, and reduced duplicate parcel UI binding refreshes during rapid edits. / 热修：将移动步长文本输入改为预设数值选择，规避 COHTML 输入法组合崩溃，并减少快速编辑时重复的地块 UI 数据刷新。" />
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--Supported values Public, Private, Unlisted-->
