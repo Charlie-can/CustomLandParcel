@@ -61,11 +61,11 @@ Demolition outside custom parcels may still follow vanilla city-limit behavior.
 	<!--Tag, can be set multiple times-->
 	<Tag Value="UIAreas" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1.0-beta" />
+	<ModVersion Value="0.1.1-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="Initial beta release: custom parcel drawing, control-node editing, multi-parcel merge, save-backed per-parcel styling, vanilla border hiding, no manual vanilla tile purchase inside active parcels, land-area based economy/maintenance integration, and build boundary validation. / 首个测试版：支持自定义地块绘制、控制节点编辑、多地块合并、随存档保存的独立样式、隐藏原版虚线、启用地块内无需手动购买原版地图格、按占地参与经济/维护费，以及建造边界校验。" />
+	<ChangeLog Value="Fixed the in-game UI module packaging so the launcher is included in the subscribed mod, and ordered the top-left launcher after existing GameTopLeft buttons. / 修复订阅版打包未包含游戏内 UI 模块的问题，并将左上角启动按钮按 GameTopLeft 顺序排到现有按钮之后。" />
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--Supported values Public, Private, Unlisted-->

@@ -113,14 +113,13 @@
 
 	<Target Name="DeployCustomLandParcelUI" AfterTargets="DeployWIP" Condition="'$(NeedBuild)' And '$(UserDataFullPath)' != ''">
 		<PropertyGroup>
-			<CustomLandParcelUIDeployDir>$(UserDataFullPath)\Mods\CustomLandParcelUI</CustomLandParcelUIDeployDir>
+			<CustomLandParcelUIDeployDir>$(DeployDir)</CustomLandParcelUIDeployDir>
 		</PropertyGroup>
 		<ItemGroup>
 			<CustomLandParcelUIFiles Include="$(MSBuildProjectDirectory)\GameUI\mod.json" />
 			<CustomLandParcelUIFiles Include="$(MSBuildProjectDirectory)\GameUI\build\*.mjs" />
 		</ItemGroup>
 		<Message Text="Copy CustomLandParcel UI module to $(CustomLandParcelUIDeployDir)" Importance="high" />
-		<RemoveDir Directories="$(CustomLandParcelUIDeployDir)" />
 		<MakeDir Directories="$(CustomLandParcelUIDeployDir)" />
 		<Copy SourceFiles="@(CustomLandParcelUIFiles)" DestinationFiles="@(CustomLandParcelUIFiles->'$(CustomLandParcelUIDeployDir)\%(RecursiveDir)%(Filename)%(Extension)')" />
 	</Target>

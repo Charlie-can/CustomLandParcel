@@ -3,7 +3,7 @@ import { CustomLandParcelRoot } from "CustomLandParcelRoot";
 
 const register: ModRegistrar = (moduleRegistry) => {
   console.log("[CustomLandParcelUI] registering top-left game panel launcher.");
-  moduleRegistry.append("GameTopLeft", CustomLandParcelRoot);
+  moduleRegistry.append("GameTopLeft", CustomLandParcelRoot, 999);
 };
 
 export default register;
