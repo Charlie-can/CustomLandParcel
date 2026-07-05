@@ -10,6 +10,12 @@ export type Parcel = {
   price: number;
   area: number;
   selected: boolean;
+  boundaryRed: number;
+  boundaryGreen: number;
+  boundaryBlue: number;
+  boundaryOpacity: number;
+  fillOpacity: number;
+  boundaryWidth: number;
   points: Point[];
 };
 

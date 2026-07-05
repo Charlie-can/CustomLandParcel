@@ -88,8 +88,9 @@ namespace CustomLandParcel.Systems
                 }
 
                 var selected = parcel.Id == store.SelectedParcelId;
-                var outlineColor = GetOutlineColor(parcel.State, selected, overlayStyle);
-                var fillColor = GetFillColor(parcel.State, selected, overlayStyle);
+                var parcelStyle = GetOverlayStyle(parcel, overlayStyle);
+                var outlineColor = GetOutlineColor(parcel.State, selected, parcelStyle);
+                var fillColor = GetFillColor(parcel.State, selected, parcelStyle);
                 for (var pointIndex = 0; pointIndex < parcel.Points.Count; pointIndex++)
                 {
                     var hoveringEdge = session.Hover.Kind == ParcelEditHitKind.Edge
@@ -102,7 +103,7 @@ namespace CustomLandParcel.Systems
                         style,
                         parcel.Points[pointIndex],
                         parcel.Points[(pointIndex + 1) % parcel.Points.Count],
-                        hoveringEdge ? overlayStyle.Width + 3f : overlayStyle.Width,
+                        hoveringEdge ? parcelStyle.Width + 3f : parcelStyle.Width,
                         dashLength,
                         gapLength);
                 }
@@ -164,6 +165,32 @@ namespace CustomLandParcel.Systems
                     blue,
                     math.clamp(settings.ParcelFillOpacity / 100f, 0f, 1f)),
                 Width = math.clamp(settings.ParcelBoundaryWidth, 2f, 14f)
+            };
+        }
+
+        private static ParcelOverlayStyle GetOverlayStyle(LandParcel parcel, ParcelOverlayStyle fallback)
+        {
+            if (parcel == null)
+            {
+                return fallback;
+            }
+
+            var red = math.clamp(parcel.BoundaryRed / 255f, 0f, 1f);
+            var green = math.clamp(parcel.BoundaryGreen / 255f, 0f, 1f);
+            var blue = math.clamp(parcel.BoundaryBlue / 255f, 0f, 1f);
+            return new ParcelOverlayStyle
+            {
+                OutlineColor = new Color(
+                    red,
+                    green,
+                    blue,
+                    math.clamp(parcel.BoundaryOpacity / 100f, 0f, 1f)),
+                FillColor = new Color(
+                    red,
+                    green,
+                    blue,
+                    math.clamp(parcel.FillOpacity / 100f, 0f, 1f)),
+                Width = math.clamp(parcel.BoundaryWidth, 2f, 14f)
             };
         }
 

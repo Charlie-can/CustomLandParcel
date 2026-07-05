@@ -50,25 +50,25 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
         position: "absolute",
         top: "56rem",
         left: "64rem",
-        width: "360rem",
-        maxHeight: "610rem",
+        width: "410rem",
+        maxHeight: "624rem",
         overflowY: "auto",
         zIndex: 10000,
         display: "flex",
         flexDirection: "column",
-        gap: "8rem",
-        padding: "9rem",
+        gap: "6rem",
+        padding: "10rem",
         color: colors.text,
         background: colors.panel,
         border: `1rem solid ${colors.border}`,
         borderRadius: "5rem",
-        boxShadow: "0 12rem 38rem rgba(0, 0, 0, 0.34)",
+        boxShadow: "0 18rem 46rem rgba(0, 0, 0, 0.48)",
         fontSize: "11rem",
       }}
     >
       <div style={{ ...rowStyle, justifyContent: "space-between", minHeight: "30rem" }}>
         <div style={{ ...columnStyle, gap: "2rem", minWidth: 0 }}>
-          <span style={{ fontSize: "14rem", fontWeight: 900 }}>{t("app.title")}</span>
+          <span style={{ fontSize: "14.5rem", fontWeight: 900 }}>{t("app.title")}</span>
           <span style={{ color: colors.muted, fontSize: "10rem" }}>
             {selected
               ? t("summary.selected", {
@@ -85,18 +85,18 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </div>
 
       <Section title={t("section.tools")}>
-        <div style={{ ...rowStyle, alignItems: "stretch" }}>
+        <div style={{ ...rowStyle, alignItems: "stretch", flexWrap: "wrap" }}>
           <PanelButton
             active={editToolActive}
             tone={editToolActive ? "primary" : "default"}
-            style={{ flex: "1 1 0", minHeight: "31rem" }}
+            style={{ flex: "1 1 0", minHeight: "28rem" }}
             tooltipLabel={t("tooltip.mapTool")}
             onSelect={() => send("setParcelEditToolActive", !editToolActive)}
           >
             {editToolActive ? t("tool.mapOn") : t("tool.mapOff")}
           </PanelButton>
           <PanelButton
-            style={{ flex: "1 1 0", minHeight: "31rem" }}
+            style={{ flex: "1 1 0", minHeight: "28rem" }}
             tooltipLabel={t("tooltip.newRectangle")}
             onSelect={() => send("addRectangle")}
           >
@@ -106,7 +106,7 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </Section>
 
       <Section title={t("section.parcels")}>
-        <div style={{ ...columnStyle, maxHeight: "112rem", overflowY: "auto", gap: "4rem" }}>
+        <div style={{ ...columnStyle, maxHeight: "118rem", overflowY: "auto", gap: "4rem" }}>
           {parcels.map((parcel) => (
             <ParcelRow
               key={parcel.id}
@@ -120,15 +120,29 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </Section>
 
       <Section title={t("section.selected")}>
-        <input
-          style={inputStyle}
-          value={selected ? selected.name : ""}
-          disabled={!selected}
-          onChange={(event) => selected && send("renameSelectedParcel", event.currentTarget.value)}
-          title={t("selected.rename")}
-        />
+        <div style={{ ...rowStyle, alignItems: "stretch", flexWrap: "wrap" }}>
+          <input
+            style={{ ...inputStyle, minHeight: "24rem", flex: "1 1 190rem" }}
+            value={selected ? selected.name : ""}
+            disabled={!selected}
+            onChange={(event) => selected && send("renameSelectedParcel", event.currentTarget.value)}
+            title={t("selected.rename")}
+          />
+          {selected && (
+            <div
+              style={{
+                width: "30rem",
+                height: "24rem",
+                flex: "0 0 auto",
+                background: `rgba(${selected.boundaryRed}, ${selected.boundaryGreen}, ${selected.boundaryBlue}, ${Math.max(0.2, selected.boundaryOpacity / 100)})`,
+                border: "1rem solid rgba(235, 248, 255, 0.56)",
+                borderRadius: "4rem",
+              }}
+            />
+          )}
+        </div>
         <MergeConfirm selected={selected} target={mergeTarget} t={t} onCancel={() => setMergeTargetId(null)} />
-        <div style={{ ...rowStyle, alignItems: "stretch" }}>
+        <div style={{ ...rowStyle, alignItems: "stretch", flexWrap: "wrap" }}>
           <PanelButton style={{ flex: "1 1 0" }} disabled={!selected} onSelect={() => send("selectNextParcel", -1)}>
             {t("action.prev")}
           </PanelButton>
@@ -146,7 +160,7 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
       </Section>
 
       <Section title={t("section.move")}>
-        <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div style={{ ...rowStyle, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
           <MovePad
             disabled={!selected}
             step={step}
@@ -158,7 +172,7 @@ export function ParcelPanel({ t, onClose }: { t: Translator; onClose: () => void
             }}
             onMove={moveSelectedParcel}
           />
-          <label style={{ ...columnStyle, gap: "3rem", color: colors.muted, fontSize: "10rem", width: "84rem" }}>
+          <label style={{ ...columnStyle, gap: "3rem", color: colors.muted, fontSize: "10rem", width: "76rem" }}>
             {t("move.step")}
             <input
               style={{ ...inputStyle, width: "100%", flex: "0 0 auto" }}

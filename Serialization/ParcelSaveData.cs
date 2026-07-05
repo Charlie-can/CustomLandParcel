@@ -9,7 +9,7 @@ namespace CustomLandParcel.Serialization
 {
     internal static class ParcelSaveData
     {
-        private const int SaveSchemaVersion = 2;
+        private const int SaveSchemaVersion = 3;
 
         public static void Write<TWriter>(ref TWriter writer, ParcelStore store)
             where TWriter : struct, IWriter
@@ -25,6 +25,12 @@ namespace CustomLandParcel.Serialization
                 writer.Write(parcel.Name ?? string.Empty);
                 writer.Write((int)parcel.State);
                 writer.Write(parcel.Price);
+                writer.Write(parcel.BoundaryRed);
+                writer.Write(parcel.BoundaryGreen);
+                writer.Write(parcel.BoundaryBlue);
+                writer.Write(parcel.BoundaryOpacity);
+                writer.Write(parcel.FillOpacity);
+                writer.Write(parcel.BoundaryWidth);
                 writer.Write(parcel.Points.Count);
                 foreach (var t in parcel.Points)
                 {
@@ -68,6 +74,22 @@ namespace CustomLandParcel.Serialization
                 reader.Read(out string name);
                 reader.Read(out int state);
                 reader.Read(out int price);
+                var boundaryRed = 51;
+                var boundaryGreen = 255;
+                var boundaryBlue = 148;
+                var boundaryOpacity = 90;
+                var fillOpacity = 28;
+                var boundaryWidth = 7;
+                if (schemaVersion >= 3)
+                {
+                    reader.Read(out boundaryRed);
+                    reader.Read(out boundaryGreen);
+                    reader.Read(out boundaryBlue);
+                    reader.Read(out boundaryOpacity);
+                    reader.Read(out fillOpacity);
+                    reader.Read(out boundaryWidth);
+                }
+
                 reader.Read(out int pointCount);
 
                 var points = new List<float2>(math.max(0, pointCount));
@@ -82,7 +104,13 @@ namespace CustomLandParcel.Serialization
                     var parcel = new LandParcel(id, name, points)
                     {
                         State = (LandParcelState)state,
-                        Price = price
+                        Price = price,
+                        BoundaryRed = Clamp(boundaryRed, 0, 255),
+                        BoundaryGreen = Clamp(boundaryGreen, 0, 255),
+                        BoundaryBlue = Clamp(boundaryBlue, 0, 255),
+                        BoundaryOpacity = Clamp(boundaryOpacity, 0, 100),
+                        FillOpacity = Clamp(fillOpacity, 0, 100),
+                        BoundaryWidth = Clamp(boundaryWidth, 2, 14)
                     };
                     ParcelGeometry.RecalculatePrice(parcel);
                     parcels.Add(parcel);
@@ -112,6 +140,11 @@ namespace CustomLandParcel.Serialization
         private static bool TryParseGuid(string text, out Guid id)
         {
             return Guid.TryParseExact(text, "N", out id) || Guid.TryParse(text, out id);
+        }
+
+        private static int Clamp(int value, int min, int max)
+        {
+            return value < min ? min : math.min(value, max);
         }
     }
 }

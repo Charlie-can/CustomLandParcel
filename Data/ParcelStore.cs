@@ -13,6 +13,15 @@ namespace CustomLandParcel.Data
         private readonly Action<string> _mWarn;
         private ParcelSelection _mSelection = ParcelSelection.Empty;
         private uint _mVersion;
+        private static readonly int3[] DefaultStylePalette =
+        {
+            new int3(51, 255, 148),
+            new int3(74, 180, 255),
+            new int3(255, 196, 72),
+            new int3(255, 112, 128),
+            new int3(184, 132, 255),
+            new int3(240, 245, 245)
+        };
 
         public ParcelStore(Action<string> info, Action<string> warn)
         {
@@ -41,6 +50,7 @@ namespace CustomLandParcel.Data
         {
             var parcel = ParcelGeometry.CreateRectangle(name, center, size);
             parcel.State = LandParcelState.Purchased;
+            ApplyDefaultStyle(parcel, _mParcels.Count);
             _mParcels.Add(parcel);
             RepriceParcel(parcel, $"{reason}: create rectangle");
             _mSelection = new ParcelSelection(parcel.Id, 0);
@@ -62,6 +72,7 @@ namespace CustomLandParcel.Data
             {
                 State = state
             };
+            ApplyDefaultStyle(parcel, _mParcels.Count);
             _mParcels.Add(parcel);
             RepriceParcel(parcel, $"{reason}: create polygon");
             _mSelection = new ParcelSelection(parcel.Id, 0);
@@ -82,6 +93,51 @@ namespace CustomLandParcel.Data
             _mSelection.ParcelId = _mParcels.Count == 0 ? Guid.Empty : _mParcels[0].Id;
             _mSelection.VertexIndex = ClampVertexIndex(SelectedParcel, _mSelection.VertexIndex);
             MarkChanged($"{reason}: deleted {selected}, nextSelected={FormatGuid(_mSelection.ParcelId)}");
+            return true;
+        }
+
+        public bool SetSelectedParcelAppearanceValue(string key, int value, string reason)
+        {
+            var selected = SelectedParcel;
+            if (selected == null)
+            {
+                _mWarn($"Parcel appearance change ignored ({reason}): no selected parcel, key='{key}', value={value}.");
+                return false;
+            }
+
+            switch (key)
+            {
+                case nameof(LandParcel.BoundaryRed):
+                case "ParcelBoundaryRed":
+                    selected.BoundaryRed = Clamp(value, 0, 255);
+                    break;
+                case nameof(LandParcel.BoundaryGreen):
+                case "ParcelBoundaryGreen":
+                    selected.BoundaryGreen = Clamp(value, 0, 255);
+                    break;
+                case nameof(LandParcel.BoundaryBlue):
+                case "ParcelBoundaryBlue":
+                    selected.BoundaryBlue = Clamp(value, 0, 255);
+                    break;
+                case nameof(LandParcel.BoundaryOpacity):
+                case "ParcelBoundaryOpacity":
+                    selected.BoundaryOpacity = Clamp(value, 0, 100);
+                    break;
+                case nameof(LandParcel.FillOpacity):
+                case "ParcelFillOpacity":
+                    selected.FillOpacity = Clamp(value, 0, 100);
+                    break;
+                case nameof(LandParcel.BoundaryWidth):
+                case "ParcelBoundaryWidth":
+                    selected.BoundaryWidth = Clamp(value, 2, 14);
+                    break;
+                default:
+                    _mWarn($"Parcel appearance change ignored ({reason}): invalid key='{key}', value={value}.");
+                    return false;
+            }
+
+            MarkChanged(
+                $"{reason}: changed appearance key={key}, value={value}, parcel={FormatGuid(selected.Id)}");
             return true;
         }
 
@@ -522,6 +578,7 @@ namespace CustomLandParcel.Data
             var parcel =
                 ParcelGeometry.CreateRectangle("Parcel 1", ParcelGeometry.DefaultCenter, ParcelGeometry.DefaultSize);
             parcel.State = LandParcelState.Purchased;
+            ApplyDefaultStyle(parcel, _mParcels.Count);
             _mParcels.Add(parcel);
             RepriceParcel(parcel, $"{reason}: seed default");
             _mSelection = new ParcelSelection(parcel.Id, 0);
@@ -590,6 +647,22 @@ namespace CustomLandParcel.Data
             }
 
             return index < 0 ? 0 : math.min(index, parcel.Points.Count - 1);
+        }
+
+        private static int Clamp(int value, int min, int max)
+        {
+            return value < min ? min : math.min(value, max);
+        }
+
+        private static void ApplyDefaultStyle(LandParcel parcel, int index)
+        {
+            var color = DefaultStylePalette[index % DefaultStylePalette.Length];
+            parcel.BoundaryRed = color.x;
+            parcel.BoundaryGreen = color.y;
+            parcel.BoundaryBlue = color.z;
+            parcel.BoundaryOpacity = 90;
+            parcel.FillOpacity = 28;
+            parcel.BoundaryWidth = 7;
         }
 
         private void MarkChanged(string message)

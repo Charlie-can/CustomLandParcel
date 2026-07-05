@@ -12,7 +12,7 @@ import {
   showVanillaUnlockedMapTileBordersBinding,
 } from "bindings";
 import { Translator } from "i18n";
-import { colors, columnStyle, rowStyle, swatchStyle } from "styles";
+import { colors, columnStyle, rowStyle } from "styles";
 
 const colorPresets = [
   { label: "Mint", red: 51, green: 255, blue: 148 },
@@ -34,9 +34,17 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
   const alphaValue = Math.round(opacity * 2.55);
 
   return (
-    <div style={{ ...columnStyle, gap: "6rem" }}>
-      <div style={{ ...rowStyle, justifyContent: "space-between", alignItems: "center" }}>
-        <label style={{ ...rowStyle, gap: "5rem", color: colors.text, fontSize: "10rem" }}>
+    <div style={{ ...columnStyle, gap: "5rem" }}>
+      <div
+        style={{
+          ...rowStyle,
+          justifyContent: "space-between",
+          alignItems: "center",
+          minHeight: "24rem",
+          padding: "0 2rem",
+        }}
+      >
+        <label style={{ ...rowStyle, gap: "5rem", color: colors.text, fontSize: "10rem", minWidth: 0 }}>
           <input
             type="checkbox"
             checked={showVanilla}
@@ -44,37 +52,30 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
           />
           {t("appearance.showVanilla")}
         </label>
-        <div style={swatchStyle(swatchColor)} title={t("appearance.color")} />
       </div>
       <div
         style={{
-          ...columnStyle,
-          gap: "5rem",
-          padding: "6rem",
-          background: "rgba(255, 255, 255, 0.045)",
-          border: "1rem solid rgba(170, 205, 218, 0.18)",
+          display: "flex",
+          alignItems: "stretch",
+          gap: "7rem",
+          padding: "7rem",
+          background: "rgba(8, 17, 22, 0.42)",
+          border: "1rem solid rgba(170, 205, 218, 0.2)",
           borderRadius: "4rem",
         }}
       >
-        <div style={{ ...rowStyle, alignItems: "center" }}>
+        <div style={{ ...columnStyle, gap: "5rem", flex: "0 0 58rem", minWidth: 0 }}>
           <div
             style={{
-              width: "34rem",
-              height: "34rem",
-              flex: "0 0 auto",
+              width: "48rem",
+              height: "48rem",
               background: swatchColor,
               border: "2rem solid rgba(235, 248, 255, 0.82)",
               borderRadius: "4rem",
-              boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.26)",
+              boxShadow: "inset 0 0 0 1rem rgba(0, 0, 0, 0.26), 0 4rem 12rem rgba(0, 0, 0, 0.28)",
             }}
           />
-          <div style={{ ...columnStyle, gap: "2rem", minWidth: 0 }}>
-            <span style={{ color: colors.text, fontSize: "10rem", fontWeight: 800 }}>{t("appearance.color")}</span>
-            <span style={{ color: colors.muted, fontSize: "9rem" }}>
-              rgba({red}, {green}, {blue}, {alphaValue})
-            </span>
-          </div>
-          <div style={{ ...rowStyle, flexWrap: "wrap", justifyContent: "flex-end", gap: "3rem", marginLeft: "auto" }}>
+          <div style={{ ...rowStyle, flexWrap: "wrap", gap: "3rem" }}>
             {colorPresets.map((preset) => (
               <button
                 key={preset.label}
@@ -97,45 +98,62 @@ export function AppearanceControls({ t }: { t: Translator }): JSX.Element {
             ))}
           </div>
         </div>
-        <DragSlider
-          label="R"
-          labelWidth="14rem"
-          value={red}
-          min={0}
-          max={255}
-          trackBackground={`linear-gradient(90deg, rgb(0, ${green}, ${blue}), rgb(255, ${green}, ${blue}))`}
-          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryRed", value)}
-        />
-        <DragSlider
-          label="G"
-          labelWidth="14rem"
-          value={green}
-          min={0}
-          max={255}
-          trackBackground={`linear-gradient(90deg, rgb(${red}, 0, ${blue}), rgb(${red}, 255, ${blue}))`}
-          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryGreen", value)}
-        />
-        <DragSlider
-          label="B"
-          labelWidth="14rem"
-          value={blue}
-          min={0}
-          max={255}
-          trackBackground={`linear-gradient(90deg, rgb(${red}, ${green}, 0), rgb(${red}, ${green}, 255))`}
-          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryBlue", value)}
-        />
-        <DragSlider
-          label="A"
-          labelWidth="14rem"
-          value={opacity}
-          min={0}
-          max={100}
-          suffix="%"
-          trackBackground={`linear-gradient(90deg, rgba(${red}, ${green}, ${blue}, 0), rgba(${red}, ${green}, ${blue}, 1))`}
-          onChange={(value) => setParcelAppearanceValue("ParcelBoundaryOpacity", value)}
-        />
+        <div style={{ ...columnStyle, gap: "4rem", flex: "1 1 auto", minWidth: 0 }}>
+          <div style={{ ...rowStyle, justifyContent: "space-between", minHeight: "13rem" }}>
+            <span style={{ color: colors.text, fontSize: "10rem", fontWeight: 900 }}>{t("appearance.color")}</span>
+            <span style={{ color: colors.muted, fontSize: "8.5rem" }}>
+              rgba({red}, {green}, {blue}, {alphaValue})
+            </span>
+          </div>
+          <DragSlider
+            label="R"
+            labelWidth="12rem"
+            value={red}
+            min={0}
+            max={255}
+            trackBackground={`linear-gradient(90deg, rgb(0, ${green}, ${blue}), rgb(255, ${green}, ${blue}))`}
+            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryRed", value)}
+          />
+          <DragSlider
+            label="G"
+            labelWidth="12rem"
+            value={green}
+            min={0}
+            max={255}
+            trackBackground={`linear-gradient(90deg, rgb(${red}, 0, ${blue}), rgb(${red}, 255, ${blue}))`}
+            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryGreen", value)}
+          />
+          <DragSlider
+            label="B"
+            labelWidth="12rem"
+            value={blue}
+            min={0}
+            max={255}
+            trackBackground={`linear-gradient(90deg, rgb(${red}, ${green}, 0), rgb(${red}, ${green}, 255))`}
+            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryBlue", value)}
+          />
+          <DragSlider
+            label="A"
+            labelWidth="12rem"
+            value={opacity}
+            min={0}
+            max={100}
+            suffix="%"
+            trackBackground={`linear-gradient(90deg, rgba(${red}, ${green}, ${blue}, 0), rgba(${red}, ${green}, ${blue}, 1))`}
+            onChange={(value) => setParcelAppearanceValue("ParcelBoundaryOpacity", value)}
+          />
+        </div>
       </div>
-      <div style={{ ...columnStyle, gap: "4rem" }}>
+      <div
+        style={{
+          ...columnStyle,
+          gap: "4rem",
+          padding: "6rem 7rem",
+          background: "rgba(232, 246, 255, 0.045)",
+          border: `1rem solid ${colors.border}`,
+          borderRadius: "4rem",
+        }}
+      >
         <DragSlider
           label={t("appearance.fillOpacity")}
           value={fillOpacity}
@@ -210,7 +228,7 @@ function DragSlider({
   }, [dragging, updateFromClientX]);
 
   return (
-    <div style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "10rem" }}>
+    <div style={{ ...rowStyle, alignItems: "center", color: colors.muted, fontSize: "9rem" }}>
       <span style={{ width: labelWidth, color: colors.text, fontWeight: 800 }}>{label}</span>
       <div
         ref={trackRef}
@@ -227,7 +245,7 @@ function DragSlider({
           position: "relative",
           flex: "1 1 auto",
           minWidth: "92rem",
-          height: "14rem",
+          height: "11rem",
           background: trackBackground,
           border: "1rem solid rgba(215, 232, 240, 0.42)",
           borderRadius: "3rem",
@@ -239,8 +257,8 @@ function DragSlider({
             position: "absolute",
             left: `${percent}%`,
             top: "-3rem",
-            width: "8rem",
-            height: "18rem",
+            width: "7rem",
+            height: "16rem",
             marginLeft: "-4rem",
             background: "rgba(245, 250, 255, 0.96)",
             border: "1rem solid rgba(0, 0, 0, 0.45)",

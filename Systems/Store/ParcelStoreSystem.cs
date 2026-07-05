@@ -81,6 +81,11 @@ namespace CustomLandParcel.Systems
             return Store.SetSelectedParcelState(state, reason);
         }
 
+        internal bool SetSelectedParcelAppearanceValue(string key, int value, string reason)
+        {
+            return Store.SetSelectedParcelAppearanceValue(key, value, reason);
+        }
+
         internal bool MoveSelectedParcel(float2 delta, string reason)
         {
             return Store.MoveSelectedParcel(delta, reason);

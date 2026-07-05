@@ -26,6 +26,18 @@ namespace CustomLandParcel.UI
                 writer.Write(PolygonMath.Area(parcel.Points));
                 writer.PropertyName("selected");
                 writer.Write(parcel.Id == store.SelectedParcelId);
+                writer.PropertyName("boundaryRed");
+                writer.Write(parcel.BoundaryRed);
+                writer.PropertyName("boundaryGreen");
+                writer.Write(parcel.BoundaryGreen);
+                writer.PropertyName("boundaryBlue");
+                writer.Write(parcel.BoundaryBlue);
+                writer.PropertyName("boundaryOpacity");
+                writer.Write(parcel.BoundaryOpacity);
+                writer.PropertyName("fillOpacity");
+                writer.Write(parcel.FillOpacity);
+                writer.PropertyName("boundaryWidth");
+                writer.Write(parcel.BoundaryWidth);
                 writer.PropertyName("min");
                 writer.Write(min);
                 writer.PropertyName("max");

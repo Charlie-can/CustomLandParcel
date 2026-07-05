@@ -31,6 +31,18 @@ namespace CustomLandParcel.Data
 
         public List<float2> Points { get; }
 
+        public int BoundaryRed { get; set; } = 51;
+
+        public int BoundaryGreen { get; set; } = 255;
+
+        public int BoundaryBlue { get; set; } = 148;
+
+        public int BoundaryOpacity { get; set; } = 90;
+
+        public int FillOpacity { get; set; } = 28;
+
+        public int BoundaryWidth { get; set; } = 7;
+
         public bool IsBuildable => State != LandParcelState.Locked;
 
         public override string ToString()

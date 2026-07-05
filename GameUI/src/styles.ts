@@ -3,13 +3,16 @@ import React from "react";
 export type ButtonTone = "default" | "primary" | "danger" | "subtle";
 
 export const colors = {
-  panel: "rgba(17, 24, 30, 0.95)",
-  panelSofter: "rgba(255, 255, 255, 0.07)",
-  border: "rgba(255, 255, 255, 0.14)",
+  panel: "rgba(13, 20, 25, 0.94)",
+  panelSofter: "rgba(232, 246, 255, 0.07)",
+  panelRaised: "rgba(30, 43, 52, 0.86)",
+  panelInset: "rgba(5, 11, 15, 0.34)",
+  border: "rgba(215, 235, 246, 0.15)",
+  borderStrong: "rgba(128, 203, 244, 0.45)",
   text: "rgba(245, 248, 252, 0.96)",
   muted: "rgba(245, 248, 252, 0.62)",
-  primary: "rgba(33, 127, 184, 0.98)",
-  primarySoft: "rgba(57, 144, 190, 0.28)",
+  primary: "rgba(35, 136, 191, 0.98)",
+  primarySoft: "rgba(55, 163, 218, 0.25)",
   green: "rgba(123, 224, 151, 0.98)",
   amber: "rgba(238, 188, 82, 0.98)",
   danger: "rgba(143, 48, 57, 0.98)",
@@ -30,10 +33,10 @@ export const columnStyle: React.CSSProperties = {
 export const inputStyle: React.CSSProperties = {
   flex: "1 1 auto",
   minWidth: 0,
-  height: "25rem",
+  height: "24rem",
   padding: "0 7rem",
   color: colors.text,
-  background: colors.panelSofter,
+  background: colors.panelInset,
   border: `1rem solid ${colors.border}`,
   borderRadius: "4rem",
   fontSize: "11rem",
@@ -92,14 +95,14 @@ export function getButtonStyle(
   };
 
   return {
-    minHeight: "25rem",
+    minHeight: "24rem",
     padding: "0 8rem",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: colors.text,
     background: active ? colors.primary : backgroundByTone[tone],
-    border: active ? "1rem solid rgba(134, 212, 255, 0.82)" : `1rem solid ${colors.border}`,
+    border: active ? `1rem solid ${colors.borderStrong}` : `1rem solid ${colors.border}`,
     borderRadius: "4rem",
     fontSize: "11rem",
     fontWeight: 700,

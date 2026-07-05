@@ -62,27 +62,27 @@ namespace CustomLandParcel.Systems
             AddUpdateBinding(new GetterValueBinding<int>(
                 Group,
                 "parcelBoundaryRed",
-                () => Mod.Settings?.ParcelBoundaryRed ?? 51));
+                () => _mParcelStoreSystem.SelectedParcel?.BoundaryRed ?? Mod.Settings?.ParcelBoundaryRed ?? 51));
             AddUpdateBinding(new GetterValueBinding<int>(
                 Group,
                 "parcelBoundaryGreen",
-                () => Mod.Settings?.ParcelBoundaryGreen ?? 255));
+                () => _mParcelStoreSystem.SelectedParcel?.BoundaryGreen ?? Mod.Settings?.ParcelBoundaryGreen ?? 255));
             AddUpdateBinding(new GetterValueBinding<int>(
                 Group,
                 "parcelBoundaryBlue",
-                () => Mod.Settings?.ParcelBoundaryBlue ?? 148));
+                () => _mParcelStoreSystem.SelectedParcel?.BoundaryBlue ?? Mod.Settings?.ParcelBoundaryBlue ?? 148));
             AddUpdateBinding(new GetterValueBinding<int>(
                 Group,
                 "parcelBoundaryOpacity",
-                () => Mod.Settings?.ParcelBoundaryOpacity ?? 90));
+                () => _mParcelStoreSystem.SelectedParcel?.BoundaryOpacity ?? Mod.Settings?.ParcelBoundaryOpacity ?? 90));
             AddUpdateBinding(new GetterValueBinding<int>(
                 Group,
                 "parcelFillOpacity",
-                () => Mod.Settings?.ParcelFillOpacity ?? 28));
+                () => _mParcelStoreSystem.SelectedParcel?.FillOpacity ?? Mod.Settings?.ParcelFillOpacity ?? 28));
             AddUpdateBinding(new GetterValueBinding<int>(
                 Group,
                 "parcelBoundaryWidth",
-                () => Mod.Settings?.ParcelBoundaryWidth ?? 7));
+                () => _mParcelStoreSystem.SelectedParcel?.BoundaryWidth ?? Mod.Settings?.ParcelBoundaryWidth ?? 7));
 
             AddBinding(new TriggerBinding(Group, "addRectangle", AddRectangle));
             AddBinding(new TriggerBinding<string>(Group, "selectParcel", SelectParcel));
@@ -229,19 +229,13 @@ namespace CustomLandParcel.Systems
 
         private void SetParcelAppearanceValue(string key, int value)
         {
-            if (Mod.Settings == null)
+            if (!_mParcelStoreSystem.SetSelectedParcelAppearanceValue(key, value, "ui setParcelAppearanceValue"))
             {
-                Mod.log.Warn($"Parcel UI trigger setParcelAppearanceValue ignored: settings not available, key='{key}', value={value}.");
                 return;
             }
 
-            if (!Mod.Settings.SetParcelAppearanceValue(key, value))
-            {
-                Mod.log.Warn($"Parcel UI trigger setParcelAppearanceValue ignored: invalid key='{key}', value={value}.");
-                return;
-            }
-
-            Mod.log.Info($"Parcel UI appearance setting changed: key={key}, value={value}.");
+            _mParcelsBinding.Update();
+            Mod.log.Info($"Parcel UI selected parcel appearance changed: key={key}, value={value}; {_mParcelStoreSystem.GetSummary()}.");
         }
 
         private void LogTrigger(string message)
