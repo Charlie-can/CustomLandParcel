@@ -1,7 +1,9 @@
 using Game;
 using Game.Areas;
 using Game.Common;
+using Game.Serialization;
 using Game.Tools;
+using Colossal.Serialization.Entities;
 using CustomLandParcel.Geometry;
 using CustomLandParcel.Systems;
 using Unity.Collections;
@@ -15,7 +17,7 @@ namespace CustomLandParcel.Compatibility
     /// It unlocks vanilla Native MapTile entities that overlap buildable custom parcels, while
     /// ConstructionRestrictionSystem remains the only source of custom-parcel boundary blocking.
     /// </summary>
-    public partial class VanillaMapTileUnlockSystem : GameSystemBase
+    public partial class VanillaMapTileUnlockSystem : GameSystemBase, IPreSerialize
     {
         private const int UnlockMaskRefreshFrames = 15;
         private const int InitialVanillaBoundsRetryFrames = 300;
@@ -67,6 +69,25 @@ namespace CustomLandParcel.Compatibility
             _mOwnershipSync.RestoreUnlockedMapTiles(_mUnlockedByParcelQuery, "system destroyed");
             DestroyLegacyBlockers("system destroyed");
             base.OnDestroy();
+        }
+
+        public void PreSerialize(Context context)
+        {
+            var restoredVisibility = _mVisibilitySync.RestoreMapTileVisibility(_mHiddenBySettingQuery, "pre-serialize");
+            var restoredLocked = _mOwnershipSync.RestoreLockedMapTiles(_mLockedByParcelQuery, "pre-serialize");
+            var restoredUnlocked = _mOwnershipSync.RestoreUnlockedMapTiles(_mUnlockedByParcelQuery, "pre-serialize");
+            var destroyedBlockers = DestroyLegacyBlockers("pre-serialize");
+            _mUnlockMaskRefreshFramesRemaining = 0;
+            if (restoredVisibility > 0 || restoredLocked > 0 || restoredUnlocked > 0 || destroyedBlockers > 0)
+            {
+                Mod.log.Info(
+                    $"Vanilla MapTile runtime compatibility state restored before serialization: purpose={context.purpose}, restoredVisibility={restoredVisibility}, restoredLocked={restoredLocked}, restoredUnlocked={restoredUnlocked}, destroyedLegacyBlockers={destroyedBlockers}, {_mParcelStoreSystem.GetSummary()}.");
+            }
+            else
+            {
+                Mod.log.Info(
+                    $"Vanilla MapTile runtime compatibility state already clean before serialization: purpose={context.purpose}, {_mParcelStoreSystem.GetSummary()}.");
+            }
         }
 
         protected override void OnUpdate()

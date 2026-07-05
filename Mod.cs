@@ -4,6 +4,7 @@ using CustomLandParcel.Patches;
 using Game;
 using Game.Modding;
 using Game.SceneFlow;
+using Game.Serialization;
 using CustomLandParcel.Systems;
 
 namespace CustomLandParcel
@@ -35,6 +36,7 @@ namespace CustomLandParcel
             CustomLandParcelPatcher.Apply(executableAssetPath);
 
             updateSystem.UpdateAt<ParcelStoreSystem>(SystemUpdatePhase.Serialize);
+            updateSystem.UpdateBefore<PreSerialize<VanillaMapTileUnlockSystem>>(SystemUpdatePhase.Serialize);
             updateSystem.UpdateAt<VanillaMapTileUnlockSystem>(SystemUpdatePhase.PreTool);
             updateSystem.UpdateAt<ParcelEditToolSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<ParcelBoundaryControlSystem>(SystemUpdatePhase.PostTool);
@@ -45,7 +47,7 @@ namespace CustomLandParcel
             updateSystem.UpdateAt<ParcelBoundaryRenderSystem>(SystemUpdatePhase.Rendering);
             updateSystem.UpdateAt<ParcelUISystem>(SystemUpdatePhase.UIUpdate);
             log.Info(
-                "Registered ParcelStoreSystem at Serialize, VanillaMapTileUnlockSystem at PreTool, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/ParcelPlacementDiagnosticsSystem at PostTool, VanillaMapTileVisibilitySystem/ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
+                "Registered ParcelStoreSystem at Serialize, PreSerialize<VanillaMapTileUnlockSystem> before Serialize, VanillaMapTileUnlockSystem at PreTool, ParcelEditToolSystem at ToolUpdate, ParcelBoundaryControlSystem/ConstructionRestrictionSystem/ParcelPlacementDiagnosticsSystem at PostTool, VanillaMapTileVisibilitySystem/ConstructionRestrictionPresentationSystem at PreCulling, ParcelBoundaryRenderSystem at Rendering, ParcelUISystem at UIUpdate.");
 
         }
 
