@@ -108,6 +108,25 @@ Read the publisher output. Confirm the command exited 0 before saying it publish
 
 ## Post-Publish
 
+Check whether the local test mod still exists:
+
+```powershell
+$localMod = "C:\Users\charlie\AppData\LocalLow\Colossal Order\Cities Skylines II\Mods\CustomLandParcel"
+Test-Path $localMod
+```
+
+If the user wants to test only the online subscription version, remove the local test mod after confirming `Cities2.exe` is not running:
+
+```powershell
+Get-Process | Where-Object { $_.ProcessName -like '*Cities*' } | Select-Object ProcessName,Id,Path
+$localMod = "C:\Users\charlie\AppData\LocalLow\Colossal Order\Cities Skylines II\Mods\CustomLandParcel"
+if (Test-Path $localMod) {
+    Remove-Item -LiteralPath $localMod -Recurse -Force
+}
+```
+
+Do not delete the local mod when the user still wants local testing or when the game is running. Report clearly whether the local folder remains or was removed.
+
 Report:
 
 - version published
@@ -115,5 +134,6 @@ Report:
 - tag name
 - whether `git push` and tag push succeeded
 - whether PDX publish command exited 0
+- whether the local test mod folder remains or was removed
 
 If any step fails, report the exact failing command and the important error line. Do not continue with later publish steps after a failed verification, commit, tag, push, or PDX publish command unless the failure is understood and fixed.

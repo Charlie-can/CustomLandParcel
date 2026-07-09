@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Colossal.Localization;
 using Game.SceneFlow;
 using Newtonsoft.Json;
@@ -13,7 +14,7 @@ namespace CustomLandParcel
         private const string LocalizationDirectoryName = "Localization";
         private static readonly List<SourceRegistration> Registrations = new List<SourceRegistration>();
 
-        public static void Register(CustomLandParcelSettings settings)
+        public static void Register(CustomLandParcelSettings settings, string executableAssetPath)
         {
             var manager = GameManager.instance.localizationManager;
             if (manager == null)
@@ -29,10 +30,10 @@ namespace CustomLandParcel
                 Unregister();
             }
 
-            RegisterLocale(manager, settings, "en-US", "en-US");
-            RegisterLocale(manager, settings, "zh-HANS", "zh-HANS");
-            RegisterLocale(manager, settings, "zh-CN", "zh-HANS");
-            RegisterLocale(manager, settings, "zh", "zh-HANS");
+            RegisterLocale(manager, settings, executableAssetPath, "en-US", "en-US");
+            RegisterLocale(manager, settings, executableAssetPath, "zh-HANS", "zh-HANS");
+            RegisterLocale(manager, settings, executableAssetPath, "zh-CN", "zh-HANS");
+            RegisterLocale(manager, settings, executableAssetPath, "zh", "zh-HANS");
 
             Mod.log.Info(
                 $"Registered CustomLandParcel localization sources from files. activeLocale={manager.activeLocaleId}, sourceCount={Registrations.Count}.");
@@ -60,10 +61,11 @@ namespace CustomLandParcel
         private static void RegisterLocale(
             LocalizationManager manager,
             CustomLandParcelSettings settings,
+            string executableAssetPath,
             string localeId,
             string fileLocaleId)
         {
-            var entries = LoadEntries(settings, fileLocaleId);
+            var entries = LoadEntries(settings, fileLocaleId, executableAssetPath);
             if (entries.Count == 0)
             {
                 Mod.log.Warn($"Skipped CustomLandParcel localization locale={localeId}: no entries loaded from {fileLocaleId}.");
@@ -76,9 +78,12 @@ namespace CustomLandParcel
             Mod.log.Info($"Registered CustomLandParcel localization locale={localeId}, fileLocale={fileLocaleId}, entries={entries.Count}.");
         }
 
-        private static Dictionary<string, string> LoadEntries(CustomLandParcelSettings settings, string localeId)
+        private static Dictionary<string, string> LoadEntries(
+            CustomLandParcelSettings settings,
+            string localeId,
+            string executableAssetPath)
         {
-            var path = GetLocalizationPath(localeId);
+            var path = GetLocalizationPath(localeId, executableAssetPath);
             if (!File.Exists(path))
             {
                 Mod.log.Warn($"CustomLandParcel localization file not found: {path}");
@@ -89,7 +94,8 @@ namespace CustomLandParcel
             Dictionary<string, string> rawEntries;
             try
             {
-                rawEntries = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(path));
+                rawEntries = JsonConvert.DeserializeObject<Dictionary<string, string>>(
+                    File.ReadAllText(path, Encoding.UTF8));
             }
             catch (Exception exception)
             {
@@ -115,14 +121,16 @@ namespace CustomLandParcel
                 entries[key] = pair.Value ?? string.Empty;
             }
 
+            Mod.log.Info($"Loaded CustomLandParcel localization file: {path}, rawEntries={rawEntries.Count}, resolvedEntries={entries.Count}.");
             return entries;
         }
 
-        private static string GetLocalizationPath(string localeId)
+        private static string GetLocalizationPath(string localeId, string executableAssetPath)
         {
             var fileName = localeId + ".json";
             var candidates = new[]
             {
+                TryGetAssetDirectory(executableAssetPath),
                 TryGetAssemblyDirectory(),
                 Path.Combine(Application.persistentDataPath, "Mods", nameof(CustomLandParcel)),
                 AppDomain.CurrentDomain.BaseDirectory
@@ -145,6 +153,24 @@ namespace CustomLandParcel
 
             return Path.Combine(Application.persistentDataPath, "Mods", nameof(CustomLandParcel),
                 LocalizationDirectoryName, fileName);
+        }
+
+        private static string TryGetAssetDirectory(string executableAssetPath)
+        {
+            if (string.IsNullOrEmpty(executableAssetPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Path.GetDirectoryName(executableAssetPath);
+            }
+            catch (Exception exception)
+            {
+                Mod.log.Warn(exception, $"Could not resolve CustomLandParcel executable asset directory for localization lookup: {executableAssetPath}");
+                return null;
+            }
         }
 
         private static string TryGetAssemblyDirectory()

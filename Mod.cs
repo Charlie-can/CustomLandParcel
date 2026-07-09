@@ -21,18 +21,18 @@ namespace CustomLandParcel
         {
             log.Info(nameof(OnLoad));
 
-            Settings = new CustomLandParcelSettings(this);
-            CustomLandParcelLocalization.Register(Settings);
-            Settings.RegisterInOptionsUI();
-            Settings.RegisterKeyBindings();
-            log.Info("Registered CustomLandParcel settings, localization, and keybindings in the game options UI.");
-
             var executableAssetPath = string.Empty;
             if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
             {
                 executableAssetPath = asset.path;
                 log.Info($"Current mod asset at {asset.path}");
             }
+
+            Settings = new CustomLandParcelSettings(this);
+            CustomLandParcelLocalization.Register(Settings, executableAssetPath);
+            Settings.RegisterInOptionsUI();
+            Settings.RegisterKeyBindings();
+            log.Info("Registered CustomLandParcel settings, localization, and keybindings in the game options UI.");
 
             CustomLandParcelPatcher.Apply(executableAssetPath);
 

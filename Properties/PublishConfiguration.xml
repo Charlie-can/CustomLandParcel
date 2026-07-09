@@ -65,11 +65,11 @@ Demolition outside custom parcels may still follow vanilla city-limit behavior.
 	<!--Tag, can be set multiple times-->
 	<Tag Value="UIAreas" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1.5-beta" />
+	<ModVersion Value="0.1.6-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="Hotfix: replaced the movement step selector with safe +/- controls, added frontend panel error isolation, normalized parcel UI data, and added backend exception guards for UI triggers, hotkeys, and map editing. / 热修：将移动步长选择改为安全的 +/- 控件，加入前端面板异常隔离，规范化地块 UI 数据，并为 UI 触发器、热键和地图编辑加入后端异常保护。" />
+	<ChangeLog Value="Hotfix: fixed settings and keybinding localization for subscribed PDX installs by loading localization files from the active mod asset folder, and read localization JSON as UTF-8. / 热修：修复在线订阅版设置与按键绑定本地化不显示的问题，现在会从实际加载的 Mod 资源目录读取本地化文件，并按 UTF-8 读取 JSON。" />
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--Supported values Public, Private, Unlisted-->
